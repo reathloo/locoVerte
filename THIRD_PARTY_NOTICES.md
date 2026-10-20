@@ -1,6 +1,6 @@
 # Third-party notices
 
-The original localVert code is licensed under GPL-3.0-only; see [LICENSE](LICENSE). This does not replace the licenses of bundled third-party components. Their notices are included in the extension ZIP and remain applicable to those components.
+The original locoVerte code is licensed under GPL-3.0-only; see [LICENSE](LICENSE). This does not replace the licenses of bundled third-party components. Their notices are included in the extension ZIP and remain applicable to those components.
 
 | Component | License | Included notice | Source |
 | --- | --- | --- | --- |

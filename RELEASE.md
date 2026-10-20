@@ -1,12 +1,12 @@
-# localVert: Release checklist
+# locoVerte: Release checklist
 
 The source stays offline-first. A Git push, an unsigned ZIP, a signed Firefox XPI, and a browser-store publication are different states. Do not describe one as another.
 
 ## Package and checks
 
-1. Increase `manifest.json` version for each submitted update. The current release candidate is **0.2.2**.
+1. Increase `manifest.json` version for each submitted update. The current release candidate is **0.2.3**.
 2. Run `pnpm install --frozen-lockfile`, `pnpm run build:vendor`, `python3 -m unittest discover -s tests -p 'test_*.py'`, and `python3 scripts/package_extension.py`.
-3. Unpack `dist/localvert-0.2.2.zip` into a temporary directory and run `pnpm exec web-ext lint --source-dir <directory>`. Lint the package, not the repository, so development scripts are excluded.
+3. Unpack `dist/locoverte-0.2.3.zip` into a temporary directory and run `pnpm exec web-ext lint --source-dir <directory>`. Lint the package, not the repository, so development scripts are excluded.
 4. Run the browser regression page with fresh local fixtures; test an installed extension in each target browser. Check a disconnected/offline run, downloads, the optional upload-field action, clipboard paste, PDF page tools, dark/light mode, and large/corrupt inputs. Record browser versions and pass/fail results before submission.
 5. Review `PRIVACY.md`, permissions, `LICENSE`, `THIRD_PARTY_NOTICES.md`, bundled library licenses, store screenshots, and the public privacy-policy URL. The public GitHub copy of `PRIVACY.md` can be linked, but store-specific requirements still need review.
 
@@ -14,7 +14,7 @@ The source stays offline-first. A Git push, an unsigned ZIP, a signed Firefox XP
 
 | Browser | Artifact and submission | Remaining gate |
 | --- | --- | --- |
-| Chrome | `dist/localvert-0.2.2.zip` to Chrome Web Store | Installed-extension smoke test, store account, listing, privacy disclosures, review |
+| Chrome | `dist/locoverte-0.2.3.zip` to Chrome Web Store | Installed-extension smoke test, store account, listing, privacy disclosures, review |
 | Edge | Same ZIP to Microsoft Edge Add-ons | Installed-extension smoke test, Partner Center, listing, review |
 | Firefox Desktop | Same ZIP to addons.mozilla.org; AMO signs the extension | Installed-extension smoke test, AMO account, signing/review. The stable Gecko ID and `none` data-collection declaration are in the manifest. |
 | Safari macOS | Use the ZIP with Apple’s Safari Web Extension Packager, then build the containing macOS app | Full Xcode or App Store Connect packager, Apple developer identity, app icon/signing, Safari smoke test, review |

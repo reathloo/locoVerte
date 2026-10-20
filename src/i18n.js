@@ -300,7 +300,7 @@ const browserLanguage = (() => {
 })();
 
 const detectedLocale = localeFromLanguages([browserLanguage, ...(globalThis.navigator?.languages ?? []), globalThis.navigator?.language]);
-const preferenceKey = 'localVert.language';
+const preferenceKey = 'locoVerte.language';
 
 export function getLanguagePreference() {
   try {

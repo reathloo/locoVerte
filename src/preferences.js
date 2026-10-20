@@ -1,6 +1,6 @@
 import { applyStaticTranslations, getLanguagePreference, locale, setLanguagePreference, t } from './i18n.js';
 
-const themeKey = 'localVert.theme';
+const themeKey = 'locoVerte.theme';
 
 function getTheme() {
   try {

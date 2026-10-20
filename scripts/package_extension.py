@@ -51,11 +51,11 @@ def package_paths():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, help="ZIP path (default: dist/localvert-VERSION.zip)")
+    parser.add_argument("--output", type=Path, help="ZIP path (default: dist/locoverte-VERSION.zip)")
     args = parser.parse_args()
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     version = manifest["version"]
-    output = args.output or ROOT / "dist" / f"localvert-{version}.zip"
+    output = args.output or ROOT / "dist" / f"locoverte-{version}.zip"
     output.parent.mkdir(parents=True, exist_ok=True)
     paths = package_paths()
     with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:

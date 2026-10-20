@@ -1,5 +1,5 @@
 try {
-  const preference = localStorage.getItem('localVert.theme');
+  const preference = localStorage.getItem('locoVerte.theme');
   if (preference === 'light' || preference === 'dark') {
     document.documentElement.dataset.theme = preference;
   }

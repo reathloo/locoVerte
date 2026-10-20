@@ -50,7 +50,7 @@ const formats = {
   'image/gif': imageOutputs,
   'image/tiff': imageOutputs,
   'image/heic': imageOutputs,
-  'application/pdf': [['application/pdf', 'PDF'], ['text/plain', 'TXT'], ['application/x-localvert-jpeg-pages', 'JPG pages (ZIP)'], ['application/x-localvert-png-pages', 'PNG pages (ZIP)']],
+  'application/pdf': [['application/pdf', 'PDF'], ['text/plain', 'TXT'], ['application/x-locoverte-jpeg-pages', 'JPG pages (ZIP)'], ['application/x-locoverte-png-pages', 'PNG pages (ZIP)']],
   'audio/mpeg': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
   'audio/wav': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
   'audio/ogg': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
@@ -222,7 +222,7 @@ function renderSettings() {
     : isAudio || isVideo ? t('mediaNotice')
       : ['image/gif', 'image/tiff'].includes(file.type) ? t('firstFrameNotice')
         : file.type === 'image/heic' ? t('heicNotice')
-    : isPdfText ? t('pdfTextNotice') : outputType.includes('localvert-') ? t('pdfImageNotice') : t(strength <= 30 ? 'pdfStructureNotice' : 'pdfRasterNotice');
+    : isPdfText ? t('pdfTextNotice') : outputType.includes('locoverte-') ? t('pdfImageNotice') : t(strength <= 30 ? 'pdfStructureNotice' : 'pdfRasterNotice');
   $('file-name').textContent = file.name;
   $('file-name').title = file.name;
   $('file-size').textContent = formatBytes(file.size);
@@ -750,7 +750,7 @@ $('batch-zip').addEventListener('click', async () => {
       return { name: count === 1 ? name : name.replace(/(\.[^.]+)$/, `-${count}$1`), blob: item.result.blob };
     });
     const blob = await zipBlobs(entries, controller.signal);
-    downloadResult({ blob, filename: 'localvert-results.zip' });
+    downloadResult({ blob, filename: 'locoverte-results.zip' });
     $('batch-progress').textContent = ready.length === items.length ? t('zipStarted') : t('zipPartial', { count: ready.length, total: items.length });
   } catch (error) { if (!controller.signal.aborted) showError(error instanceof Error ? error.message : t('processingError')); }
   finally { operation = null; renderBatch(); }
@@ -828,7 +828,7 @@ async function convert(source, outputType, strength, targetBytes, cached, signal
   const image = source.type.startsWith('image/') && outputType.startsWith('image/')
     ? cached ?? (targetBytes && source.type === outputType && source.size <= targetBytes && !transformed ? { blob: source, targetMet: true }
       : targetBytes ? await compressImageToTarget(source, outputType, targetBytes, signal, options) : await compressImage(source, outputType, value, signal, options)) : null;
-  const conversion = image ?? (source.type === 'application/pdf' && outputType.includes('localvert-')
+  const conversion = image ?? (source.type === 'application/pdf' && outputType.includes('locoverte-')
     ? { blob: await pdfToImagesZip(source, outputType.includes('png-pages') ? 'image/png' : 'image/jpeg', strength, signal, updateProgress) }
     : source.type === 'application/pdf' && outputType === 'application/pdf'
     ? await compressPdf(source, value, targetBytes, signal, updateProgress)
@@ -887,7 +887,7 @@ $('process').addEventListener('click', async () => {
   try {
     targetBytes = targetBytesFor(source, config.outputType);
     if (source.type.startsWith('image/') && config.outputType.startsWith('image/')) options = imageOptions();
-    if (outputName.value.trim()) customFilename(config.outputType.includes('localvert-') ? 'application/zip' : config.outputType);
+    if (outputName.value.trim()) customFilename(config.outputType.includes('locoverte-') ? 'application/zip' : config.outputType);
   } catch (error) { return showError(error.message); }
   const cached = imageCache;
   stopEstimate();
@@ -958,7 +958,7 @@ $('download').addEventListener('click', () => {
 
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 extensionApi?.runtime?.onMessage?.addListener((message) => {
-  if (message?.type === 'localVertSourceTab' && Number.isInteger(message.tabId)) {
+  if (message?.type === 'locoVerteSourceTab' && Number.isInteger(message.tabId)) {
     uploadTabId = message.tabId;
     if (result) renderResult();
   }

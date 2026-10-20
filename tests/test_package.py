@@ -46,9 +46,9 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(archive.read("THIRD_PARTY_NOTICES.md"), (ROOT / "THIRD_PARTY_NOTICES.md").read_bytes())
                 manifest = json.loads(archive.read("manifest.json"))
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["data_collection_permissions"]["required"], ["none"])
-                self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "localvert@reathloo.dev")
+                self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@reathloo.dev")
                 self.assertEqual(manifest["permissions"], ["activeTab", "scripting"])
-                self.assertEqual(manifest["version"], "0.2.2")
+                self.assertEqual(manifest["version"], "0.2.3")
 
 
 if __name__ == "__main__":

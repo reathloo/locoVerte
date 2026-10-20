@@ -6,7 +6,7 @@ import { deflateSync, deflateRawSync } from 'node:zlib';
 import pdfLib from '../vendor/pdf-lib/pdf-lib.min.js';
 import UTIF from 'utif';
 
-const directory = process.argv[2] ? join(process.cwd(), process.argv[2]) : await mkdtemp(join(tmpdir(), 'localvert-tests-'));
+const directory = process.argv[2] ? join(process.cwd(), process.argv[2]) : await mkdtemp(join(tmpdir(), 'locoverte-tests-'));
 if (process.argv[2]) await mkdir(directory, { recursive: true });
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -56,7 +56,7 @@ await save('invalid.jpg', 'This is not an image.');
 await save('broken.pdf', '%PDF-1.7\nBroken PDF for error handling.');
 await save('empty.png', '');
 const text = await pdfLib.PDFDocument.create();
-text.addPage().drawText('localVert: searchable text and vector shapes', { x: 40, y: 780, size: 16 });
+text.addPage().drawText('locoVerte: searchable text and vector shapes', { x: 40, y: 780, size: 16 });
 text.getPage(0).drawRectangle({ x: 40, y: 650, width: 150, height: 80, color: pdfLib.rgb(.2, .4, .7) });
 await save('text.pdf', await text.save());
 const scan = await pdfLib.PDFDocument.create();

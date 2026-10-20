@@ -34,7 +34,7 @@ jobs:
         run: python scripts/package_extension.py
       - name: Lint packaged Firefox extension
         run: |
-          archive=$(find dist -maxdepth 1 -name 'localvert-*.zip' -print -quit)
+          archive=$(find dist -maxdepth 1 -name 'locoverte-*.zip' -print -quit)
           test -n "$archive"
           mkdir -p dist/firefox-lint
           python -m zipfile -e "$archive" dist/firefox-lint

@@ -200,7 +200,7 @@ async function run(files) {
     const converted = await compressPdf(pdf, 80, null, signal(), () => {});
     const loaded = await PDFLib.PDFDocument.load(await converted.blob.arrayBuffer());
     assert(loaded.getPageCount() === 1 && converted.blob.size <= pdf.size, 'PDF optimization damaged document');
-    assert((await (await pdfToText(converted.blob, signal())).text()).includes('localVert'), 'Selectable text was lost');
+    assert((await (await pdfToText(converted.blob, signal())).text()).includes('locoVerte'), 'Selectable text was lost');
   });
   await check('PDF with signature marker is kept unchanged', async () => {
     const signed = new File([pdf, '\n/ByteRange [0 1 2 3]\n'], 'signed.pdf', { type: 'application/pdf' });
@@ -355,7 +355,7 @@ async function run(files) {
   });
   await check('PDF to text retains selectable text', async () => {
     const blob = await pdfToText(pdf, signal());
-    assert((await blob.text()).includes('localVert'), 'Text missing');
+    assert((await blob.text()).includes('locoVerte'), 'Text missing');
   });
   await check('Scanned PDF does not pretend to contain OCR text', async () => {
     let rejected = false;

@@ -15,7 +15,7 @@ import { locale, t } from './i18n.js';
     const existing = windows.find((item) => item.tabs?.some((tab) => tab.url === url));
     if (existing) {
       await api.windows.update(existing.id, { focused: true });
-      if (sourceTab) await api.runtime.sendMessage({ type: 'localVertSourceTab', tabId: sourceTab });
+      if (sourceTab) await api.runtime.sendMessage({ type: 'locoVerteSourceTab', tabId: sourceTab });
     } else {
       await api.windows.create({
         url: sourceTab ? `${url}?sourceTab=${sourceTab}` : url,
