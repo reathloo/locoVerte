@@ -38,30 +38,41 @@ const items = [];
 let nextItemId = 0;
 const MAX_BATCH_FILES = 20;
 const previewUrls = [];
-const imageOutputs = [['image/jpeg', 'JPEG'], ['image/png', 'PNG'], ['image/webp', 'WebP'], ['application/pdf', 'PDF']];
+const imageOutputs = [['image/jpeg', 'JPEG'], ['image/png', 'PNG'], ['image/webp', 'WebP'], ['image/gif', 'GIF'], ['application/pdf', 'PDF']];
 const avifCanvas = document.createElement('canvas');
 avifCanvas.width = avifCanvas.height = 1;
-if (avifCanvas.toDataURL('image/avif').startsWith('data:image/avif')) imageOutputs.splice(3, 0, ['image/avif', 'AVIF']);
+if (avifCanvas.toDataURL('image/avif').startsWith('data:image/avif')) imageOutputs.splice(4, 0, ['image/avif', 'AVIF']);
+const audioOutputs = [['audio/mpeg', 'MP3'], ['audio/mp4', 'M4A'], ['audio/aac', 'AAC'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']];
+const videoContainers = [['video/mp4', 'MP4'], ['video/quicktime', 'MOV'], ['video/webm', 'WebM'], ['video/x-matroska', 'MKV'], ['video/mp2t', 'MPEG-TS']];
+const videoOutputs = [...videoContainers, ['image/gif', 'GIF'], ['image/jpeg', 'JPG frame'], ['image/png', 'PNG frame'], ['image/webp', 'WebP frame'], ...audioOutputs];
+const pdfOutputs = [['application/pdf', 'PDF'], ['text/plain', 'TXT'], ['application/x-locoverte-jpeg-pages', 'JPG pages (ZIP)'], ['application/x-locoverte-png-pages', 'PNG pages (ZIP)'], ['application/x-locoverte-webp-pages', 'WebP pages (ZIP)']];
+if (imageOutputs.some(([type]) => type === 'image/avif')) pdfOutputs.push(['application/x-locoverte-avif-pages', 'AVIF pages (ZIP)']);
 const formats = {
   'image/jpeg': imageOutputs,
   'image/png': imageOutputs,
   'image/webp': imageOutputs,
   'image/avif': imageOutputs,
-  'image/gif': imageOutputs,
+  'image/bmp': imageOutputs,
+  'image/gif': [...imageOutputs, ...videoContainers],
   'image/tiff': imageOutputs,
   'image/heic': imageOutputs,
-  'application/pdf': [['application/pdf', 'PDF'], ['text/plain', 'TXT'], ['application/x-locoverte-jpeg-pages', 'JPG pages (ZIP)'], ['application/x-locoverte-png-pages', 'PNG pages (ZIP)']],
-  'audio/mpeg': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
-  'audio/wav': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
-  'audio/ogg': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
-  'audio/flac': [['audio/mpeg', 'MP3'], ['audio/ogg', 'Opus (OGG)'], ['audio/flac', 'FLAC'], ['audio/wav', 'WAV']],
-  'video/mp4': [['video/mp4', 'MP4'], ['video/webm', 'WebM']],
-  'video/webm': [['video/webm', 'WebM'], ['video/mp4', 'MP4']],
+  'application/pdf': pdfOutputs,
+  'audio/mpeg': audioOutputs,
+  'audio/mp4': audioOutputs,
+  'audio/aac': audioOutputs,
+  'audio/wav': audioOutputs,
+  'audio/ogg': audioOutputs,
+  'audio/flac': audioOutputs,
+  'video/mp4': videoOutputs,
+  'video/quicktime': videoOutputs,
+  'video/webm': videoOutputs,
+  'video/x-matroska': videoOutputs,
+  'video/mp2t': videoOutputs,
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [['application/pdf', 'PDF'], ['text/plain', 'TXT']],
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [['application/pdf', 'PDF'], ['text/csv', 'CSV']],
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': [['application/pdf', 'PDF'], ['text/plain', 'TXT']],
 };
-const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'application/pdf': 'pdf', 'application/zip': 'zip', 'text/plain': 'txt', 'text/csv': 'csv', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'audio/flac': 'flac', 'video/mp4': 'mp4', 'video/webm': 'webm' };
+const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif', 'application/pdf': 'pdf', 'application/zip': 'zip', 'text/plain': 'txt', 'text/csv': 'csv', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/ogg': 'ogg', 'audio/flac': 'flac', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/x-matroska': 'mkv', 'video/mp2t': 'ts' };
 const mediaCapabilities = new Map();
 let mediaCapabilityCheck;
 
@@ -72,7 +83,7 @@ function availableFormats(type) {
 }
 
 async function checkMediaCapabilities() {
-  mediaCapabilityCheck ??= Promise.all(['audio/mpeg', 'audio/ogg', 'audio/flac', 'audio/wav', 'video/mp4', 'video/webm'].map(async (type) => {
+  mediaCapabilityCheck ??= Promise.all(['image/gif', 'image/jpeg', 'image/png', 'image/webp', ...audioOutputs.map(([type]) => type), ...videoContainers.map(([type]) => type)].map(async (type) => {
     try { mediaCapabilities.set(type, await mediaSupport(type)); }
     catch { mediaCapabilities.set(type, false); }
   }));
@@ -121,6 +132,7 @@ function hasImageAdjustments(options) {
 
 function targetBytesFor(source, outputType) {
   const enabled = source.type.startsWith('image/') && outputType.startsWith('image/')
+    && !(source.type === 'image/gif' && outputType === 'image/gif')
     || source.type === 'application/pdf' && outputType === 'application/pdf';
   const raw = enabled ? target.value.trim() : '';
   if (!raw) return null;
@@ -203,6 +215,8 @@ function renderSettings() {
   const isVideo = file.type.startsWith('video/');
   const isOffice = file.type.includes('officedocument');
   const isPdfText = isPdf && outputType === 'text/plain';
+  const gifToVideo = file.type === 'image/gif' && outputType.startsWith('video/');
+  const unchangedGif = file.type === 'image/gif' && outputType === 'image/gif';
   const hasQuality = !isPdfText && !isOffice;
   const isImageOutput = file.type.startsWith('image/') && outputType.startsWith('image/');
   $('quality-row').hidden = !hasQuality;
@@ -212,14 +226,14 @@ function renderSettings() {
   $('pdf-pages-tools').hidden = !isPdf;
   $('adjust-label').textContent = t(isPdf ? 'pdfAdjust' : 'imageAdjust');
   $('image-controls').hidden = !isImageOutput;
-  $('target-row').hidden = !isImageOutput && (!isPdf || outputType !== 'application/pdf');
+  $('target-row').hidden = unchangedGif || !isImageOutput && (!isPdf || outputType !== 'application/pdf');
   const targetText = target.value.trim();
   const summary = [targetText ? t('targetSizeSummary', { size: targetText }) : '', outputName.value.trim() ? t('renamedSummary') : ''].filter(Boolean).join(' · ');
   $('adjust-summary').hidden = !summary;
   $('adjust-summary').textContent = summary;
-  $('pdf-notice').hidden = !isPdf && !isOffice && !isAudio && !isVideo && !['image/gif', 'image/tiff', 'image/heic'].includes(file.type);
+  $('pdf-notice').hidden = unchangedGif || !isPdf && !isOffice && !isAudio && !isVideo && !['image/gif', 'image/tiff', 'image/heic'].includes(file.type);
   $('pdf-notice').textContent = isOffice ? t(outputType === 'application/pdf' ? 'officePdfNotice' : outputType === 'text/csv' ? 'xlsxNotice' : 'docxNotice')
-    : isAudio || isVideo ? t('mediaNotice')
+    : isAudio || isVideo || gifToVideo ? t('mediaNotice')
       : ['image/gif', 'image/tiff'].includes(file.type) ? t('firstFrameNotice')
         : file.type === 'image/heic' ? t('heicNotice')
     : isPdfText ? t('pdfTextNotice') : outputType.includes('locoverte-') ? t('pdfImageNotice') : t(strength <= 30 ? 'pdfStructureNotice' : 'pdfRasterNotice');
@@ -322,7 +336,7 @@ function scheduleEstimate() {
   const source = file;
   const config = settings();
   const isImage = source.type.startsWith('image/');
-  const estimable = (config.isPdf && config.outputType === 'application/pdf') || (isImage && config.outputType !== 'application/pdf');
+  const estimable = (config.isPdf && config.outputType === 'application/pdf') || (isImage && config.outputType.startsWith('image/'));
   const key = !estimable || (isImage && target.value.trim()) ? 'noEstimate'
     : source.size > MAX_ESTIMATE_SIZE ? (config.isPdf ? 'largePdfEstimate' : 'largeImageEstimate') : 'calculating';
   estimateData = { key };
@@ -363,7 +377,7 @@ async function selectFiles(candidates) {
     } catch (error) { errors.push(`${candidate.name}: ${error.message}`); }
   }
   if (version !== selectionVersion) return;
-  if (accepted.some(({ source }) => /^(audio|video)\//.test(source.type))) await checkMediaCapabilities();
+  if (accepted.some(({ source }) => /^(audio|video)\//.test(source.type) || source.type === 'image/gif')) await checkMediaCapabilities();
   if (version !== selectionVersion) return;
   for (const item of accepted) {
     const options = availableFormats(item.source.type);
@@ -800,6 +814,7 @@ $('merge-download').addEventListener('click', () => {
 quality.addEventListener('input', changed);
 format.addEventListener('change', () => {
   const supportsTarget = file?.type.startsWith('image/') && format.value.startsWith('image/')
+    && !(file.type === 'image/gif' && format.value === 'image/gif')
     || file?.type === 'application/pdf' && format.value === 'application/pdf';
   if (!supportsTarget) target.value = '';
   changed();
@@ -826,14 +841,17 @@ async function convert(source, outputType, strength, targetBytes, cached, signal
   const value = 100 - strength;
   const transformed = hasImageAdjustments(options);
   const image = source.type.startsWith('image/') && outputType.startsWith('image/')
-    ? cached ?? (targetBytes && source.type === outputType && source.size <= targetBytes && !transformed ? { blob: source, targetMet: true }
+    ? source.type === 'image/gif' && outputType === 'image/gif' && !transformed ? { blob: source }
+      : cached ?? (targetBytes && source.type === outputType && source.size <= targetBytes && !transformed ? { blob: source, targetMet: true }
       : targetBytes ? await compressImageToTarget(source, outputType, targetBytes, signal, options) : await compressImage(source, outputType, value, signal, options)) : null;
   const conversion = image ?? (source.type === 'application/pdf' && outputType.includes('locoverte-')
-    ? { blob: await pdfToImagesZip(source, outputType.includes('png-pages') ? 'image/png' : 'image/jpeg', strength, signal, updateProgress) }
+    ? { blob: await pdfToImagesZip(source, outputType.includes('png-pages') ? 'image/png'
+      : outputType.includes('webp-pages') ? 'image/webp' : outputType.includes('avif-pages') ? 'image/avif' : 'image/jpeg', strength, signal, updateProgress) }
     : source.type === 'application/pdf' && outputType === 'application/pdf'
     ? await compressPdf(source, value, targetBytes, signal, updateProgress)
     : { blob: source.type === 'application/pdf' ? await pdfToText(source, signal, updateProgress)
-      : source.type.startsWith('image/') ? await imageToPdf(source, strength, signal)
+      : source.type === 'image/gif' && outputType.startsWith('video/') ? await convertMedia(source, outputType, strength, signal, updateProgress)
+        : source.type.startsWith('image/') ? await imageToPdf(source, strength, signal)
         : source.type.startsWith('audio/') || source.type.startsWith('video/') ? await convertMedia(source, outputType, strength, signal, updateProgress)
           : outputType === 'application/pdf' ? await officeToPdf(source, signal)
             : outputType === 'text/csv' ? await xlsxToCsv(source, signal)

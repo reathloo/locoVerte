@@ -65,6 +65,17 @@ async function run(files) {
   await check('File detection works without MIME type or extension', async () => {
     const normalized = await validateFile(new File([png], 'image-no-extension', { type: '' }));
     assert(normalized.type === 'image/png' && normalized.size === png.size, 'Incorrect normalization');
+    const quickTime = await validateFile(new File([
+      new Uint8Array([0, 0, 0, 20, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20, 0x20]),
+    ], 'recording.mov', { type: 'video/quicktime' }));
+    assert(quickTime.type === 'video/mp4', 'QuickTime MOV was not normalized to MP4');
+    const m4a = await validateFile(new File([new Uint8Array([0, 0, 0, 20, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20])], 'audio.m4a'));
+    assert(m4a.type === 'audio/mp4', 'M4A was not detected as audio');
+    const aac = await validateFile(new File([new Uint8Array([0xff, 0xf1, 0x50, 0x80, 0, 0, 0])], 'audio.aac'));
+    assert(aac.type === 'audio/aac', 'AAC was not detected');
+    const transport = new Uint8Array(377); transport[0] = transport[188] = 0x47;
+    assert((await validateFile(new File([transport], 'video.ts'))).type === 'video/mp2t', 'MPEG-TS was not detected');
+    assert((await validateFile(new File([new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]), 'matroska'], 'video.mkv'))).type === 'video/x-matroska', 'MKV was not detected');
   });
   await check('Larger files use type-specific local limits', async () => {
     const mock = (size, header, type) => ({ size, type, slice: () => new Blob([header]) });
@@ -122,7 +133,7 @@ async function run(files) {
       assert(rejected, 'Invalid input accepted');
     });
   }
-  for (const type of ['image/jpeg', 'image/webp', 'image/png']) {
+  for (const type of ['image/jpeg', 'image/webp', 'image/png', 'image/gif']) {
     await check(`Encode and decode ${type}`, async () => {
       const converted = await compressImage(png, type, 60, signal());
       assert(converted.blob.type === type, 'Unexpected encoder fallback');
@@ -137,7 +148,8 @@ async function run(files) {
       const converted = await compressImage(input, 'image/png', 60, signal());
       assert(converted.blob.type === 'image/png', 'Output is not PNG');
       const bitmap = await createImageBitmap(converted.blob);
-      assert(bitmap.width === 1 && bitmap.height === 1, 'Wrong dimensions');
+      const expected = name === 'image.gif' ? 2 : 1;
+      assert(bitmap.width === expected && bitmap.height === expected, 'Wrong dimensions');
       bitmap.close();
     });
   }
@@ -405,7 +417,7 @@ async function run(files) {
       assert(String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8, 12)) === 'WAVE', 'WAV header missing');
     }
   });
-  for (const type of ['audio/ogg', 'audio/flac']) {
+  for (const type of ['audio/mp4', 'audio/aac', 'audio/ogg', 'audio/flac']) {
     if (await mediaSupport(type)) await check(`WAV to ${type} encodes locally`, async () => {
       const input = await validateFile(files['tone.wav']);
       const blob = await convertMedia(input, type, 40, signal());
@@ -439,6 +451,9 @@ async function run(files) {
       assert(sourceTracks.length > 0, 'Recorded WebM has no video track');
       const optimized = await convertMedia(input, 'video/webm', 70, signal());
       assert(optimized.size > 100, 'Optimized WebM is empty');
+      const gif = await convertMedia(input, 'image/gif', 70, signal());
+      const gifHeader = await gif.slice(0, 6).text();
+      assert(gif.size > 100 && gif.type === 'image/gif' && gifHeader === 'GIF89a', 'Animated GIF header missing');
       const result = await convertMedia(input, 'video/mp4', 40, signal());
       const bytes = new Uint8Array(await result.slice(4, 8).arrayBuffer());
       assert(result.size > 100 && String.fromCharCode(...bytes) === 'ftyp', 'MP4 header missing');
@@ -446,6 +461,14 @@ async function run(files) {
       const resultTracks = await resultProbe.getVideoTracks();
       resultProbe.dispose();
       assert(resultTracks.length > 0, 'Converted MP4 has no video track');
+      const animated = await convertMedia(await validateFile(files['image.gif']), 'video/mp4', 40, signal());
+      assert(animated.size > 100 && String.fromCharCode(...new Uint8Array(await animated.slice(4, 8).arrayBuffer())) === 'ftyp', 'GIF to MP4 failed');
+      for (const [type, header] of [['video/quicktime', 'ftyp'], ['video/x-matroska', '26,69,223,163'], ['video/mp2t', '71']]) {
+        if (!(await mediaSupport(type))) continue;
+        const converted = await convertMedia(input, type, 40, signal());
+        const start = new Uint8Array(await converted.slice(type === 'video/quicktime' ? 4 : 0, type === 'video/quicktime' ? 8 : type === 'video/x-matroska' ? 4 : 1).arrayBuffer());
+        assert(converted.size > 100 && (type === 'video/quicktime' ? String.fromCharCode(...start) : start.join()) === header, `${type} header missing`);
+      }
       let roundTrip;
       try { roundTrip = await convertMedia(await validateFile(new File([result], 'sample.mp4')), 'video/webm', 70, signal()); }
       catch (error) { throw new Error(`MP4 → WebM: ${error.message} (${error.cause ?? 'no detail'})`); }

@@ -36,6 +36,1385 @@ var require_worker_threads = __commonJS({
   }
 });
 
+// node_modules/.pnpm/gifenc@1.0.3/node_modules/gifenc/dist/gifenc.js
+var require_gifenc = __commonJS({
+  "node_modules/.pnpm/gifenc@1.0.3/node_modules/gifenc/dist/gifenc.js"(exports) {
+    var __defProp2 = Object.defineProperty;
+    var __markAsModule = (target) => __defProp2(target, "__esModule", { value: true });
+    var __export = (target, all) => {
+      for (var name in all)
+        __defProp2(target, name, { get: all[name], enumerable: true });
+    };
+    __markAsModule(exports);
+    __export(exports, {
+      GIFEncoder: () => GIFEncoder2,
+      applyPalette: () => applyPalette2,
+      default: () => src_default,
+      nearestColor: () => nearestColor,
+      nearestColorIndex: () => nearestColorIndex,
+      nearestColorIndexWithDistance: () => nearestColorIndexWithDistance,
+      prequantize: () => prequantize,
+      quantize: () => quantize2,
+      snapColorsToPalette: () => snapColorsToPalette
+    });
+    var constants_default = {
+      signature: "GIF",
+      version: "89a",
+      trailer: 59,
+      extensionIntroducer: 33,
+      applicationExtensionLabel: 255,
+      graphicControlExtensionLabel: 249,
+      imageSeparator: 44,
+      signatureSize: 3,
+      versionSize: 3,
+      globalColorTableFlagMask: 128,
+      colorResolutionMask: 112,
+      sortFlagMask: 8,
+      globalColorTableSizeMask: 7,
+      applicationIdentifierSize: 8,
+      applicationAuthCodeSize: 3,
+      disposalMethodMask: 28,
+      userInputFlagMask: 2,
+      transparentColorFlagMask: 1,
+      localColorTableFlagMask: 128,
+      interlaceFlagMask: 64,
+      idSortFlagMask: 32,
+      localColorTableSizeMask: 7
+    };
+    function createStream(initialCapacity = 256) {
+      let cursor = 0;
+      let contents = new Uint8Array(initialCapacity);
+      return {
+        get buffer() {
+          return contents.buffer;
+        },
+        reset() {
+          cursor = 0;
+        },
+        bytesView() {
+          return contents.subarray(0, cursor);
+        },
+        bytes() {
+          return contents.slice(0, cursor);
+        },
+        writeByte(byte) {
+          expand(cursor + 1);
+          contents[cursor] = byte;
+          cursor++;
+        },
+        writeBytes(data, offset = 0, byteLength = data.length) {
+          expand(cursor + byteLength);
+          for (let i = 0; i < byteLength; i++) {
+            contents[cursor++] = data[i + offset];
+          }
+        },
+        writeBytesView(data, offset = 0, byteLength = data.byteLength) {
+          expand(cursor + byteLength);
+          contents.set(data.subarray(offset, offset + byteLength), cursor);
+          cursor += byteLength;
+        }
+      };
+      function expand(newCapacity) {
+        var prevCapacity = contents.length;
+        if (prevCapacity >= newCapacity)
+          return;
+        var CAPACITY_DOUBLING_MAX = 1024 * 1024;
+        newCapacity = Math.max(newCapacity, prevCapacity * (prevCapacity < CAPACITY_DOUBLING_MAX ? 2 : 1.125) >>> 0);
+        if (prevCapacity != 0)
+          newCapacity = Math.max(newCapacity, 256);
+        const oldContents = contents;
+        contents = new Uint8Array(newCapacity);
+        if (cursor > 0)
+          contents.set(oldContents.subarray(0, cursor), 0);
+      }
+    }
+    var BITS = 12;
+    var DEFAULT_HSIZE = 5003;
+    var MASKS = [
+      0,
+      1,
+      3,
+      7,
+      15,
+      31,
+      63,
+      127,
+      255,
+      511,
+      1023,
+      2047,
+      4095,
+      8191,
+      16383,
+      32767,
+      65535
+    ];
+    function lzwEncode(width, height, pixels, colorDepth, outStream = createStream(512), accum = new Uint8Array(256), htab = new Int32Array(DEFAULT_HSIZE), codetab = new Int32Array(DEFAULT_HSIZE)) {
+      const hsize = htab.length;
+      const initCodeSize = Math.max(2, colorDepth);
+      accum.fill(0);
+      codetab.fill(0);
+      htab.fill(-1);
+      let cur_accum = 0;
+      let cur_bits = 0;
+      const init_bits = initCodeSize + 1;
+      const g_init_bits = init_bits;
+      let clear_flg = false;
+      let n_bits = g_init_bits;
+      let maxcode = (1 << n_bits) - 1;
+      const ClearCode = 1 << init_bits - 1;
+      const EOFCode = ClearCode + 1;
+      let free_ent = ClearCode + 2;
+      let a_count = 0;
+      let ent = pixels[0];
+      let hshift = 0;
+      for (let fcode = hsize; fcode < 65536; fcode *= 2) {
+        ++hshift;
+      }
+      hshift = 8 - hshift;
+      outStream.writeByte(initCodeSize);
+      output(ClearCode);
+      const length = pixels.length;
+      for (let idx = 1; idx < length; idx++) {
+        next_block: {
+          const c = pixels[idx];
+          const fcode = (c << BITS) + ent;
+          let i = c << hshift ^ ent;
+          if (htab[i] === fcode) {
+            ent = codetab[i];
+            break next_block;
+          }
+          const disp = i === 0 ? 1 : hsize - i;
+          while (htab[i] >= 0) {
+            i -= disp;
+            if (i < 0)
+              i += hsize;
+            if (htab[i] === fcode) {
+              ent = codetab[i];
+              break next_block;
+            }
+          }
+          output(ent);
+          ent = c;
+          if (free_ent < 1 << BITS) {
+            codetab[i] = free_ent++;
+            htab[i] = fcode;
+          } else {
+            htab.fill(-1);
+            free_ent = ClearCode + 2;
+            clear_flg = true;
+            output(ClearCode);
+          }
+        }
+      }
+      output(ent);
+      output(EOFCode);
+      outStream.writeByte(0);
+      return outStream.bytesView();
+      function output(code) {
+        cur_accum &= MASKS[cur_bits];
+        if (cur_bits > 0)
+          cur_accum |= code << cur_bits;
+        else
+          cur_accum = code;
+        cur_bits += n_bits;
+        while (cur_bits >= 8) {
+          accum[a_count++] = cur_accum & 255;
+          if (a_count >= 254) {
+            outStream.writeByte(a_count);
+            outStream.writeBytesView(accum, 0, a_count);
+            a_count = 0;
+          }
+          cur_accum >>= 8;
+          cur_bits -= 8;
+        }
+        if (free_ent > maxcode || clear_flg) {
+          if (clear_flg) {
+            n_bits = g_init_bits;
+            maxcode = (1 << n_bits) - 1;
+            clear_flg = false;
+          } else {
+            ++n_bits;
+            maxcode = n_bits === BITS ? 1 << n_bits : (1 << n_bits) - 1;
+          }
+        }
+        if (code == EOFCode) {
+          while (cur_bits > 0) {
+            accum[a_count++] = cur_accum & 255;
+            if (a_count >= 254) {
+              outStream.writeByte(a_count);
+              outStream.writeBytesView(accum, 0, a_count);
+              a_count = 0;
+            }
+            cur_accum >>= 8;
+            cur_bits -= 8;
+          }
+          if (a_count > 0) {
+            outStream.writeByte(a_count);
+            outStream.writeBytesView(accum, 0, a_count);
+            a_count = 0;
+          }
+        }
+      }
+    }
+    var lzwEncode_default = lzwEncode;
+    function rgb888_to_rgb565(r, g, b) {
+      return r << 8 & 63488 | g << 2 & 992 | b >> 3;
+    }
+    function rgba8888_to_rgba4444(r, g, b, a) {
+      return r >> 4 | g & 240 | (b & 240) << 4 | (a & 240) << 8;
+    }
+    function rgb888_to_rgb444(r, g, b) {
+      return r >> 4 << 8 | g & 240 | b >> 4;
+    }
+    function clamp2(value, min, max) {
+      return value < min ? min : value > max ? max : value;
+    }
+    function sqr(value) {
+      return value * value;
+    }
+    function find_nn(bins, idx, hasAlpha) {
+      var nn = 0;
+      var err = 1e100;
+      const bin1 = bins[idx];
+      const n1 = bin1.cnt;
+      const wa = bin1.ac;
+      const wr = bin1.rc;
+      const wg = bin1.gc;
+      const wb = bin1.bc;
+      for (var i = bin1.fw; i != 0; i = bins[i].fw) {
+        const bin = bins[i];
+        const n2 = bin.cnt;
+        const nerr2 = n1 * n2 / (n1 + n2);
+        if (nerr2 >= err)
+          continue;
+        var nerr = 0;
+        if (hasAlpha) {
+          nerr += nerr2 * sqr(bin.ac - wa);
+          if (nerr >= err)
+            continue;
+        }
+        nerr += nerr2 * sqr(bin.rc - wr);
+        if (nerr >= err)
+          continue;
+        nerr += nerr2 * sqr(bin.gc - wg);
+        if (nerr >= err)
+          continue;
+        nerr += nerr2 * sqr(bin.bc - wb);
+        if (nerr >= err)
+          continue;
+        err = nerr;
+        nn = i;
+      }
+      bin1.err = err;
+      bin1.nn = nn;
+    }
+    function create_bin() {
+      return {
+        ac: 0,
+        rc: 0,
+        gc: 0,
+        bc: 0,
+        cnt: 0,
+        nn: 0,
+        fw: 0,
+        bk: 0,
+        tm: 0,
+        mtm: 0,
+        err: 0
+      };
+    }
+    function create_bin_list(data, format) {
+      const bincount = format === "rgb444" ? 4096 : 65536;
+      const bins = new Array(bincount);
+      const size = data.length;
+      if (format === "rgba4444") {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const a = color >> 24 & 255;
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgba8888_to_rgba4444(r, g, b, a);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.ac += a;
+          bin.cnt++;
+        }
+      } else if (format === "rgb444") {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgb888_to_rgb444(r, g, b);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.cnt++;
+        }
+      } else {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgb888_to_rgb565(r, g, b);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.cnt++;
+        }
+      }
+      return bins;
+    }
+    function quantize2(rgba, maxColors, opts = {}) {
+      const {
+        format = "rgb565",
+        clearAlpha = true,
+        clearAlphaColor = 0,
+        clearAlphaThreshold = 0,
+        oneBitAlpha = false
+      } = opts;
+      if (!rgba || !rgba.buffer) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (!(rgba instanceof Uint8Array) && !(rgba instanceof Uint8ClampedArray)) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      const data = new Uint32Array(rgba.buffer);
+      let useSqrt = opts.useSqrt !== false;
+      const hasAlpha = format === "rgba4444";
+      const bins = create_bin_list(data, format);
+      const bincount = bins.length;
+      const bincountMinusOne = bincount - 1;
+      const heap = new Uint32Array(bincount + 1);
+      var maxbins = 0;
+      for (var i = 0; i < bincount; ++i) {
+        const bin = bins[i];
+        if (bin != null) {
+          var d = 1 / bin.cnt;
+          if (hasAlpha)
+            bin.ac *= d;
+          bin.rc *= d;
+          bin.gc *= d;
+          bin.bc *= d;
+          bins[maxbins++] = bin;
+        }
+      }
+      if (sqr(maxColors) / maxbins < 0.022) {
+        useSqrt = false;
+      }
+      var i = 0;
+      for (; i < maxbins - 1; ++i) {
+        bins[i].fw = i + 1;
+        bins[i + 1].bk = i;
+        if (useSqrt)
+          bins[i].cnt = Math.sqrt(bins[i].cnt);
+      }
+      if (useSqrt)
+        bins[i].cnt = Math.sqrt(bins[i].cnt);
+      var h, l, l2;
+      for (i = 0; i < maxbins; ++i) {
+        find_nn(bins, i, false);
+        var err = bins[i].err;
+        for (l = ++heap[0]; l > 1; l = l2) {
+          l2 = l >> 1;
+          if (bins[h = heap[l2]].err <= err)
+            break;
+          heap[l] = h;
+        }
+        heap[l] = i;
+      }
+      var extbins = maxbins - maxColors;
+      for (i = 0; i < extbins; ) {
+        var tb;
+        for (; ; ) {
+          var b1 = heap[1];
+          tb = bins[b1];
+          if (tb.tm >= tb.mtm && bins[tb.nn].mtm <= tb.tm)
+            break;
+          if (tb.mtm == bincountMinusOne)
+            b1 = heap[1] = heap[heap[0]--];
+          else {
+            find_nn(bins, b1, false);
+            tb.tm = i;
+          }
+          var err = bins[b1].err;
+          for (l = 1; (l2 = l + l) <= heap[0]; l = l2) {
+            if (l2 < heap[0] && bins[heap[l2]].err > bins[heap[l2 + 1]].err)
+              l2++;
+            if (err <= bins[h = heap[l2]].err)
+              break;
+            heap[l] = h;
+          }
+          heap[l] = b1;
+        }
+        var nb = bins[tb.nn];
+        var n1 = tb.cnt;
+        var n2 = nb.cnt;
+        var d = 1 / (n1 + n2);
+        if (hasAlpha)
+          tb.ac = d * (n1 * tb.ac + n2 * nb.ac);
+        tb.rc = d * (n1 * tb.rc + n2 * nb.rc);
+        tb.gc = d * (n1 * tb.gc + n2 * nb.gc);
+        tb.bc = d * (n1 * tb.bc + n2 * nb.bc);
+        tb.cnt += nb.cnt;
+        tb.mtm = ++i;
+        bins[nb.bk].fw = nb.fw;
+        bins[nb.fw].bk = nb.bk;
+        nb.mtm = bincountMinusOne;
+      }
+      let palette = [];
+      var k = 0;
+      for (i = 0; ; ++k) {
+        let r = clamp2(Math.round(bins[i].rc), 0, 255);
+        let g = clamp2(Math.round(bins[i].gc), 0, 255);
+        let b = clamp2(Math.round(bins[i].bc), 0, 255);
+        let a = 255;
+        if (hasAlpha) {
+          a = clamp2(Math.round(bins[i].ac), 0, 255);
+          if (oneBitAlpha) {
+            const threshold = typeof oneBitAlpha === "number" ? oneBitAlpha : 127;
+            a = a <= threshold ? 0 : 255;
+          }
+          if (clearAlpha && a <= clearAlphaThreshold) {
+            r = g = b = clearAlphaColor;
+            a = 0;
+          }
+        }
+        const color = hasAlpha ? [r, g, b, a] : [r, g, b];
+        const exists = existsInPalette(palette, color);
+        if (!exists)
+          palette.push(color);
+        if ((i = bins[i].fw) == 0)
+          break;
+      }
+      return palette;
+    }
+    function existsInPalette(palette, color) {
+      for (let i = 0; i < palette.length; i++) {
+        const p = palette[i];
+        let matchesRGB = p[0] === color[0] && p[1] === color[1] && p[2] === color[2];
+        let matchesAlpha = p.length >= 4 && color.length >= 4 ? p[3] === color[3] : true;
+        if (matchesRGB && matchesAlpha)
+          return true;
+      }
+      return false;
+    }
+    function euclideanDistanceSquared(a, b) {
+      var sum = 0;
+      var n;
+      for (n = 0; n < a.length; n++) {
+        const dx = a[n] - b[n];
+        sum += dx * dx;
+      }
+      return sum;
+    }
+    function roundStep(byte, step) {
+      return step > 1 ? Math.round(byte / step) * step : byte;
+    }
+    function prequantize(rgba, { roundRGB = 5, roundAlpha = 10, oneBitAlpha = null } = {}) {
+      const data = new Uint32Array(rgba.buffer);
+      for (let i = 0; i < data.length; i++) {
+        const color = data[i];
+        let a = color >> 24 & 255;
+        let b = color >> 16 & 255;
+        let g = color >> 8 & 255;
+        let r = color & 255;
+        a = roundStep(a, roundAlpha);
+        if (oneBitAlpha) {
+          const threshold = typeof oneBitAlpha === "number" ? oneBitAlpha : 127;
+          a = a <= threshold ? 0 : 255;
+        }
+        r = roundStep(r, roundRGB);
+        g = roundStep(g, roundRGB);
+        b = roundStep(b, roundRGB);
+        data[i] = a << 24 | b << 16 | g << 8 | r << 0;
+      }
+    }
+    function applyPalette2(rgba, palette, format = "rgb565") {
+      if (!rgba || !rgba.buffer) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (!(rgba instanceof Uint8Array) && !(rgba instanceof Uint8ClampedArray)) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (palette.length > 256) {
+        throw new Error("applyPalette() only works with 256 colors or less");
+      }
+      const data = new Uint32Array(rgba.buffer);
+      const length = data.length;
+      const bincount = format === "rgb444" ? 4096 : 65536;
+      const index = new Uint8Array(length);
+      const cache = new Array(bincount);
+      const hasAlpha = format === "rgba4444";
+      if (format === "rgba4444") {
+        for (let i = 0; i < length; i++) {
+          const color = data[i];
+          const a = color >> 24 & 255;
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const key = rgba8888_to_rgba4444(r, g, b, a);
+          const idx = key in cache ? cache[key] : cache[key] = nearestColorIndexRGBA(r, g, b, a, palette);
+          index[i] = idx;
+        }
+      } else {
+        const rgb888_to_key = format === "rgb444" ? rgb888_to_rgb444 : rgb888_to_rgb565;
+        for (let i = 0; i < length; i++) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const key = rgb888_to_key(r, g, b);
+          const idx = key in cache ? cache[key] : cache[key] = nearestColorIndexRGB(r, g, b, palette);
+          index[i] = idx;
+        }
+      }
+      return index;
+    }
+    function nearestColorIndexRGBA(r, g, b, a, palette) {
+      let k = 0;
+      let mindist = 1e100;
+      for (let i = 0; i < palette.length; i++) {
+        const px2 = palette[i];
+        const a2 = px2[3];
+        let curdist = sqr2(a2 - a);
+        if (curdist > mindist)
+          continue;
+        const r2 = px2[0];
+        curdist += sqr2(r2 - r);
+        if (curdist > mindist)
+          continue;
+        const g2 = px2[1];
+        curdist += sqr2(g2 - g);
+        if (curdist > mindist)
+          continue;
+        const b2 = px2[2];
+        curdist += sqr2(b2 - b);
+        if (curdist > mindist)
+          continue;
+        mindist = curdist;
+        k = i;
+      }
+      return k;
+    }
+    function nearestColorIndexRGB(r, g, b, palette) {
+      let k = 0;
+      let mindist = 1e100;
+      for (let i = 0; i < palette.length; i++) {
+        const px2 = palette[i];
+        const r2 = px2[0];
+        let curdist = sqr2(r2 - r);
+        if (curdist > mindist)
+          continue;
+        const g2 = px2[1];
+        curdist += sqr2(g2 - g);
+        if (curdist > mindist)
+          continue;
+        const b2 = px2[2];
+        curdist += sqr2(b2 - b);
+        if (curdist > mindist)
+          continue;
+        mindist = curdist;
+        k = i;
+      }
+      return k;
+    }
+    function snapColorsToPalette(palette, knownColors, threshold = 5) {
+      if (!palette.length || !knownColors.length)
+        return;
+      const paletteRGB = palette.map((p) => p.slice(0, 3));
+      const thresholdSq = threshold * threshold;
+      const dim = palette[0].length;
+      for (let i = 0; i < knownColors.length; i++) {
+        let color = knownColors[i];
+        if (color.length < dim) {
+          color = [color[0], color[1], color[2], 255];
+        } else if (color.length > dim) {
+          color = color.slice(0, 3);
+        } else {
+          color = color.slice();
+        }
+        const r = nearestColorIndexWithDistance(paletteRGB, color.slice(0, 3), euclideanDistanceSquared);
+        const idx = r[0];
+        const distanceSq = r[1];
+        if (distanceSq > 0 && distanceSq <= thresholdSq) {
+          palette[idx] = color;
+        }
+      }
+    }
+    function sqr2(a) {
+      return a * a;
+    }
+    function nearestColorIndex(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      let minDist = Infinity;
+      let minDistIndex = -1;
+      for (let j = 0; j < colors.length; j++) {
+        const paletteColor = colors[j];
+        const dist = distanceFn(pixel, paletteColor);
+        if (dist < minDist) {
+          minDist = dist;
+          minDistIndex = j;
+        }
+      }
+      return minDistIndex;
+    }
+    function nearestColorIndexWithDistance(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      let minDist = Infinity;
+      let minDistIndex = -1;
+      for (let j = 0; j < colors.length; j++) {
+        const paletteColor = colors[j];
+        const dist = distanceFn(pixel, paletteColor);
+        if (dist < minDist) {
+          minDist = dist;
+          minDistIndex = j;
+        }
+      }
+      return [minDistIndex, minDist];
+    }
+    function nearestColor(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      return colors[nearestColorIndex(colors, pixel, distanceFn)];
+    }
+    function GIFEncoder2(opt = {}) {
+      const { initialCapacity = 4096, auto = true } = opt;
+      const stream = createStream(initialCapacity);
+      const HSIZE = 5003;
+      const accum = new Uint8Array(256);
+      const htab = new Int32Array(HSIZE);
+      const codetab = new Int32Array(HSIZE);
+      let hasInit = false;
+      return {
+        reset() {
+          stream.reset();
+          hasInit = false;
+        },
+        finish() {
+          stream.writeByte(constants_default.trailer);
+        },
+        bytes() {
+          return stream.bytes();
+        },
+        bytesView() {
+          return stream.bytesView();
+        },
+        get buffer() {
+          return stream.buffer;
+        },
+        get stream() {
+          return stream;
+        },
+        writeHeader,
+        writeFrame(index, width, height, opts = {}) {
+          const {
+            transparent = false,
+            transparentIndex = 0,
+            delay = 0,
+            palette = null,
+            repeat = 0,
+            colorDepth = 8,
+            dispose = -1
+          } = opts;
+          let first = false;
+          if (auto) {
+            if (!hasInit) {
+              first = true;
+              writeHeader();
+              hasInit = true;
+            }
+          } else {
+            first = Boolean(opts.first);
+          }
+          width = Math.max(0, Math.floor(width));
+          height = Math.max(0, Math.floor(height));
+          if (first) {
+            if (!palette) {
+              throw new Error("First frame must include a { palette } option");
+            }
+            encodeLogicalScreenDescriptor(stream, width, height, palette, colorDepth);
+            encodeColorTable(stream, palette);
+            if (repeat >= 0) {
+              encodeNetscapeExt(stream, repeat);
+            }
+          }
+          const delayTime = Math.round(delay / 10);
+          encodeGraphicControlExt(stream, dispose, delayTime, transparent, transparentIndex);
+          const useLocalColorTable = Boolean(palette) && !first;
+          encodeImageDescriptor(stream, width, height, useLocalColorTable ? palette : null);
+          if (useLocalColorTable)
+            encodeColorTable(stream, palette);
+          encodePixels(stream, index, width, height, colorDepth, accum, htab, codetab);
+        }
+      };
+      function writeHeader() {
+        writeUTFBytes(stream, "GIF89a");
+      }
+    }
+    function encodeGraphicControlExt(stream, dispose, delay, transparent, transparentIndex) {
+      stream.writeByte(33);
+      stream.writeByte(249);
+      stream.writeByte(4);
+      if (transparentIndex < 0) {
+        transparentIndex = 0;
+        transparent = false;
+      }
+      var transp, disp;
+      if (!transparent) {
+        transp = 0;
+        disp = 0;
+      } else {
+        transp = 1;
+        disp = 2;
+      }
+      if (dispose >= 0) {
+        disp = dispose & 7;
+      }
+      disp <<= 2;
+      const userInput = 0;
+      stream.writeByte(0 | disp | userInput | transp);
+      writeUInt16(stream, delay);
+      stream.writeByte(transparentIndex || 0);
+      stream.writeByte(0);
+    }
+    function encodeLogicalScreenDescriptor(stream, width, height, palette, colorDepth = 8) {
+      const globalColorTableFlag = 1;
+      const sortFlag = 0;
+      const globalColorTableSize = colorTableSize(palette.length) - 1;
+      const fields = globalColorTableFlag << 7 | colorDepth - 1 << 4 | sortFlag << 3 | globalColorTableSize;
+      const backgroundColorIndex = 0;
+      const pixelAspectRatio = 0;
+      writeUInt16(stream, width);
+      writeUInt16(stream, height);
+      stream.writeBytes([fields, backgroundColorIndex, pixelAspectRatio]);
+    }
+    function encodeNetscapeExt(stream, repeat) {
+      stream.writeByte(33);
+      stream.writeByte(255);
+      stream.writeByte(11);
+      writeUTFBytes(stream, "NETSCAPE2.0");
+      stream.writeByte(3);
+      stream.writeByte(1);
+      writeUInt16(stream, repeat);
+      stream.writeByte(0);
+    }
+    function encodeColorTable(stream, palette) {
+      const colorTableLength = 1 << colorTableSize(palette.length);
+      for (let i = 0; i < colorTableLength; i++) {
+        let color = [0, 0, 0];
+        if (i < palette.length) {
+          color = palette[i];
+        }
+        stream.writeByte(color[0]);
+        stream.writeByte(color[1]);
+        stream.writeByte(color[2]);
+      }
+    }
+    function encodeImageDescriptor(stream, width, height, localPalette) {
+      stream.writeByte(44);
+      writeUInt16(stream, 0);
+      writeUInt16(stream, 0);
+      writeUInt16(stream, width);
+      writeUInt16(stream, height);
+      if (localPalette) {
+        const interlace = 0;
+        const sorted = 0;
+        const palSize = colorTableSize(localPalette.length) - 1;
+        stream.writeByte(128 | interlace | sorted | 0 | palSize);
+      } else {
+        stream.writeByte(0);
+      }
+    }
+    function encodePixels(stream, index, width, height, colorDepth = 8, accum, htab, codetab) {
+      lzwEncode_default(width, height, index, colorDepth, stream, accum, htab, codetab);
+    }
+    function writeUInt16(stream, short) {
+      stream.writeByte(short & 255);
+      stream.writeByte(short >> 8 & 255);
+    }
+    function writeUTFBytes(stream, text) {
+      for (var i = 0; i < text.length; i++) {
+        stream.writeByte(text.charCodeAt(i));
+      }
+    }
+    function colorTableSize(length) {
+      return Math.max(Math.ceil(Math.log2(length)), 1);
+    }
+    var src_default = GIFEncoder2;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/index.js
+var require_lib = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.loop = exports.conditional = exports.parse = void 0;
+    var parse = function parse2(stream, schema) {
+      var result = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
+      var parent = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : result;
+      if (Array.isArray(schema)) {
+        schema.forEach(function(partSchema) {
+          return parse2(stream, partSchema, result, parent);
+        });
+      } else if (typeof schema === "function") {
+        schema(stream, result, parent, parse2);
+      } else {
+        var key = Object.keys(schema)[0];
+        if (Array.isArray(schema[key])) {
+          parent[key] = {};
+          parse2(stream, schema[key], result, parent[key]);
+        } else {
+          parent[key] = schema[key](stream, result, parent, parse2);
+        }
+      }
+      return result;
+    };
+    exports.parse = parse;
+    var conditional = function conditional2(schema, conditionFunc) {
+      return function(stream, result, parent, parse2) {
+        if (conditionFunc(stream, result, parent)) {
+          parse2(stream, schema, result, parent);
+        }
+      };
+    };
+    exports.conditional = conditional;
+    var loop = function loop2(schema, continueFunc) {
+      return function(stream, result, parent, parse2) {
+        var arr = [];
+        var lastStreamPos = stream.pos;
+        while (continueFunc(stream, result, parent)) {
+          var newParent = {};
+          parse2(stream, schema, result, newParent);
+          if (stream.pos === lastStreamPos) {
+            break;
+          }
+          lastStreamPos = stream.pos;
+          arr.push(newParent);
+        }
+        return arr;
+      };
+    };
+    exports.loop = loop;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/parsers/uint8.js
+var require_uint8 = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/parsers/uint8.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.readBits = exports.readArray = exports.readUnsigned = exports.readString = exports.peekBytes = exports.readBytes = exports.peekByte = exports.readByte = exports.buildStream = void 0;
+    var buildStream = function buildStream2(uint8Data) {
+      return {
+        data: uint8Data,
+        pos: 0
+      };
+    };
+    exports.buildStream = buildStream;
+    var readByte = function readByte2() {
+      return function(stream) {
+        return stream.data[stream.pos++];
+      };
+    };
+    exports.readByte = readByte;
+    var peekByte = function peekByte2() {
+      var offset = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : 0;
+      return function(stream) {
+        return stream.data[stream.pos + offset];
+      };
+    };
+    exports.peekByte = peekByte;
+    var readBytes2 = function readBytes3(length) {
+      return function(stream) {
+        return stream.data.subarray(stream.pos, stream.pos += length);
+      };
+    };
+    exports.readBytes = readBytes2;
+    var peekBytes = function peekBytes2(length) {
+      return function(stream) {
+        return stream.data.subarray(stream.pos, stream.pos + length);
+      };
+    };
+    exports.peekBytes = peekBytes;
+    var readString = function readString2(length) {
+      return function(stream) {
+        return Array.from(readBytes2(length)(stream)).map(function(value) {
+          return String.fromCharCode(value);
+        }).join("");
+      };
+    };
+    exports.readString = readString;
+    var readUnsigned = function readUnsigned2(littleEndian) {
+      return function(stream) {
+        var bytes2 = readBytes2(2)(stream);
+        return littleEndian ? (bytes2[1] << 8) + bytes2[0] : (bytes2[0] << 8) + bytes2[1];
+      };
+    };
+    exports.readUnsigned = readUnsigned;
+    var readArray = function readArray2(byteSize, totalOrFunc) {
+      return function(stream, result, parent) {
+        var total = typeof totalOrFunc === "function" ? totalOrFunc(stream, result, parent) : totalOrFunc;
+        var parser = readBytes2(byteSize);
+        var arr = new Array(total);
+        for (var i = 0; i < total; i++) {
+          arr[i] = parser(stream);
+        }
+        return arr;
+      };
+    };
+    exports.readArray = readArray;
+    var subBitsTotal = function subBitsTotal2(bits, startIndex, length) {
+      var result = 0;
+      for (var i = 0; i < length; i++) {
+        result += bits[startIndex + i] && Math.pow(2, length - i - 1);
+      }
+      return result;
+    };
+    var readBits = function readBits2(schema) {
+      return function(stream) {
+        var _byte = readByte()(stream);
+        var bits = new Array(8);
+        for (var i = 0; i < 8; i++) {
+          bits[7 - i] = !!(_byte & 1 << i);
+        }
+        return Object.keys(schema).reduce(function(res, key) {
+          var def = schema[key];
+          if (def.length) {
+            res[key] = subBitsTotal(bits, def.index, def.length);
+          } else {
+            res[key] = bits[def.index];
+          }
+          return res;
+        }, {});
+      };
+    };
+    exports.readBits = readBits;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/schemas/gif.js
+var require_gif = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/schemas/gif.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports["default"] = void 0;
+    var _ = require_lib();
+    var _uint = require_uint8();
+    var subBlocksSchema = {
+      blocks: function blocks(stream) {
+        var terminator = 0;
+        var chunks = [];
+        var streamSize = stream.data.length;
+        var total = 0;
+        for (var size = (0, _uint.readByte)()(stream); size !== terminator; size = (0, _uint.readByte)()(stream)) {
+          if (!size) break;
+          if (stream.pos + size >= streamSize) {
+            var availableSize = streamSize - stream.pos;
+            chunks.push((0, _uint.readBytes)(availableSize)(stream));
+            total += availableSize;
+            break;
+          }
+          chunks.push((0, _uint.readBytes)(size)(stream));
+          total += size;
+        }
+        var result = new Uint8Array(total);
+        var offset = 0;
+        for (var i = 0; i < chunks.length; i++) {
+          result.set(chunks[i], offset);
+          offset += chunks[i].length;
+        }
+        return result;
+      }
+    };
+    var gceSchema = (0, _.conditional)({
+      gce: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        byteSize: (0, _uint.readByte)()
+      }, {
+        extras: (0, _uint.readBits)({
+          future: {
+            index: 0,
+            length: 3
+          },
+          disposal: {
+            index: 3,
+            length: 3
+          },
+          userInput: {
+            index: 6
+          },
+          transparentColorGiven: {
+            index: 7
+          }
+        })
+      }, {
+        delay: (0, _uint.readUnsigned)(true)
+      }, {
+        transparentColorIndex: (0, _uint.readByte)()
+      }, {
+        terminator: (0, _uint.readByte)()
+      }]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 249;
+    });
+    var imageSchema = (0, _.conditional)({
+      image: [{
+        code: (0, _uint.readByte)()
+      }, {
+        descriptor: [{
+          left: (0, _uint.readUnsigned)(true)
+        }, {
+          top: (0, _uint.readUnsigned)(true)
+        }, {
+          width: (0, _uint.readUnsigned)(true)
+        }, {
+          height: (0, _uint.readUnsigned)(true)
+        }, {
+          lct: (0, _uint.readBits)({
+            exists: {
+              index: 0
+            },
+            interlaced: {
+              index: 1
+            },
+            sort: {
+              index: 2
+            },
+            future: {
+              index: 3,
+              length: 2
+            },
+            size: {
+              index: 5,
+              length: 3
+            }
+          })
+        }]
+      }, (0, _.conditional)({
+        lct: (0, _uint.readArray)(3, function(stream, result, parent) {
+          return Math.pow(2, parent.descriptor.lct.size + 1);
+        })
+      }, function(stream, result, parent) {
+        return parent.descriptor.lct.exists;
+      }), {
+        data: [{
+          minCodeSize: (0, _uint.readByte)()
+        }, subBlocksSchema]
+      }]
+    }, function(stream) {
+      return (0, _uint.peekByte)()(stream) === 44;
+    });
+    var textSchema = (0, _.conditional)({
+      text: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        blockSize: (0, _uint.readByte)()
+      }, {
+        preData: function preData(stream, result, parent) {
+          return (0, _uint.readBytes)(parent.text.blockSize)(stream);
+        }
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 1;
+    });
+    var applicationSchema = (0, _.conditional)({
+      application: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        blockSize: (0, _uint.readByte)()
+      }, {
+        id: function id(stream, result, parent) {
+          return (0, _uint.readString)(parent.blockSize)(stream);
+        }
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 255;
+    });
+    var commentSchema = (0, _.conditional)({
+      comment: [{
+        codes: (0, _uint.readBytes)(2)
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 254;
+    });
+    var schema = [
+      {
+        header: [{
+          signature: (0, _uint.readString)(3)
+        }, {
+          version: (0, _uint.readString)(3)
+        }]
+      },
+      {
+        lsd: [{
+          width: (0, _uint.readUnsigned)(true)
+        }, {
+          height: (0, _uint.readUnsigned)(true)
+        }, {
+          gct: (0, _uint.readBits)({
+            exists: {
+              index: 0
+            },
+            resolution: {
+              index: 1,
+              length: 3
+            },
+            sort: {
+              index: 4
+            },
+            size: {
+              index: 5,
+              length: 3
+            }
+          })
+        }, {
+          backgroundColorIndex: (0, _uint.readByte)()
+        }, {
+          pixelAspectRatio: (0, _uint.readByte)()
+        }]
+      },
+      (0, _.conditional)({
+        gct: (0, _uint.readArray)(3, function(stream, result) {
+          return Math.pow(2, result.lsd.gct.size + 1);
+        })
+      }, function(stream, result) {
+        return result.lsd.gct.exists;
+      }),
+      // content frames
+      {
+        frames: (0, _.loop)([gceSchema, applicationSchema, commentSchema, imageSchema, textSchema], function(stream) {
+          var nextCode = (0, _uint.peekByte)()(stream);
+          return nextCode === 33 || nextCode === 44;
+        })
+      }
+    ];
+    var _default = schema;
+    exports["default"] = _default;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/deinterlace.js
+var require_deinterlace = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/deinterlace.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.deinterlace = void 0;
+    var deinterlace = function deinterlace2(pixels, width) {
+      var newPixels = new Array(pixels.length);
+      var rows = pixels.length / width;
+      var cpRow = function cpRow2(toRow2, fromRow2) {
+        var fromPixels = pixels.slice(fromRow2 * width, (fromRow2 + 1) * width);
+        newPixels.splice.apply(newPixels, [toRow2 * width, width].concat(fromPixels));
+      };
+      var offsets = [0, 4, 2, 1];
+      var steps = [8, 8, 4, 2];
+      var fromRow = 0;
+      for (var pass = 0; pass < 4; pass++) {
+        for (var toRow = offsets[pass]; toRow < rows; toRow += steps[pass]) {
+          cpRow(toRow, fromRow);
+          fromRow++;
+        }
+      }
+      return newPixels;
+    };
+    exports.deinterlace = deinterlace;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/lzw.js
+var require_lzw = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/lzw.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.lzw = void 0;
+    var lzw = function lzw2(minCodeSize, data, pixelCount) {
+      var MAX_STACK_SIZE = 4096;
+      var nullCode = -1;
+      var npix = pixelCount;
+      var available, clear, code_mask, code_size, end_of_information, in_code, old_code, bits, code, i, datum, data_size, first, top, bi, pi;
+      var dstPixels = new Array(pixelCount);
+      var prefix = new Array(MAX_STACK_SIZE);
+      var suffix = new Array(MAX_STACK_SIZE);
+      var pixelStack = new Array(MAX_STACK_SIZE + 1);
+      data_size = minCodeSize;
+      clear = 1 << data_size;
+      end_of_information = clear + 1;
+      available = clear + 2;
+      old_code = nullCode;
+      code_size = data_size + 1;
+      code_mask = (1 << code_size) - 1;
+      for (code = 0; code < clear; code++) {
+        prefix[code] = 0;
+        suffix[code] = code;
+      }
+      var datum, bits, count, first, top, pi, bi;
+      datum = bits = count = first = top = pi = bi = 0;
+      for (i = 0; i < npix; ) {
+        if (top === 0) {
+          if (bits < code_size) {
+            datum += data[bi] << bits;
+            bits += 8;
+            bi++;
+            continue;
+          }
+          code = datum & code_mask;
+          datum >>= code_size;
+          bits -= code_size;
+          if (code > available || code == end_of_information) {
+            break;
+          }
+          if (code == clear) {
+            code_size = data_size + 1;
+            code_mask = (1 << code_size) - 1;
+            available = clear + 2;
+            old_code = nullCode;
+            continue;
+          }
+          if (old_code == nullCode) {
+            pixelStack[top++] = suffix[code];
+            old_code = code;
+            first = code;
+            continue;
+          }
+          in_code = code;
+          if (code == available) {
+            pixelStack[top++] = first;
+            code = old_code;
+          }
+          while (code > clear) {
+            pixelStack[top++] = suffix[code];
+            code = prefix[code];
+          }
+          first = suffix[code] & 255;
+          pixelStack[top++] = first;
+          if (available < MAX_STACK_SIZE) {
+            prefix[available] = old_code;
+            suffix[available] = first;
+            available++;
+            if ((available & code_mask) === 0 && available < MAX_STACK_SIZE) {
+              code_size++;
+              code_mask += available;
+            }
+          }
+          old_code = in_code;
+        }
+        top--;
+        dstPixels[pi++] = pixelStack[top];
+        i++;
+      }
+      for (i = pi; i < npix; i++) {
+        dstPixels[i] = 0;
+      }
+      return dstPixels;
+    };
+    exports.lzw = lzw;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/index.js
+var require_lib2 = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.decompressFrames = exports.decompressFrame = exports.parseGIF = void 0;
+    var _gif = _interopRequireDefault(require_gif());
+    var _jsBinarySchemaParser = require_lib();
+    var _uint = require_uint8();
+    var _deinterlace = require_deinterlace();
+    var _lzw = require_lzw();
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : { "default": obj };
+    }
+    var parseGIF2 = function parseGIF3(arrayBuffer) {
+      var byteData = new Uint8Array(arrayBuffer);
+      return (0, _jsBinarySchemaParser.parse)((0, _uint.buildStream)(byteData), _gif["default"]);
+    };
+    exports.parseGIF = parseGIF2;
+    var generatePatch = function generatePatch2(image) {
+      var totalPixels = image.pixels.length;
+      var patchData = new Uint8ClampedArray(totalPixels * 4);
+      for (var i = 0; i < totalPixels; i++) {
+        var pos = i * 4;
+        var colorIndex = image.pixels[i];
+        var color = image.colorTable[colorIndex] || [0, 0, 0];
+        patchData[pos] = color[0];
+        patchData[pos + 1] = color[1];
+        patchData[pos + 2] = color[2];
+        patchData[pos + 3] = colorIndex !== image.transparentIndex ? 255 : 0;
+      }
+      return patchData;
+    };
+    var decompressFrame = function decompressFrame2(frame, gct, buildImagePatch) {
+      if (!frame.image) {
+        console.warn("gif frame does not have associated image.");
+        return;
+      }
+      var image = frame.image;
+      var totalPixels = image.descriptor.width * image.descriptor.height;
+      var pixels = (0, _lzw.lzw)(image.data.minCodeSize, image.data.blocks, totalPixels);
+      if (image.descriptor.lct.interlaced) {
+        pixels = (0, _deinterlace.deinterlace)(pixels, image.descriptor.width);
+      }
+      var resultImage = {
+        pixels,
+        dims: {
+          top: frame.image.descriptor.top,
+          left: frame.image.descriptor.left,
+          width: frame.image.descriptor.width,
+          height: frame.image.descriptor.height
+        }
+      };
+      if (image.descriptor.lct && image.descriptor.lct.exists) {
+        resultImage.colorTable = image.lct;
+      } else {
+        resultImage.colorTable = gct;
+      }
+      if (frame.gce) {
+        resultImage.delay = (frame.gce.delay || 10) * 10;
+        resultImage.disposalType = frame.gce.extras.disposal;
+        if (frame.gce.extras.transparentColorGiven) {
+          resultImage.transparentIndex = frame.gce.transparentColorIndex;
+        }
+      }
+      if (buildImagePatch) {
+        resultImage.patch = generatePatch(resultImage);
+      }
+      return resultImage;
+    };
+    exports.decompressFrame = decompressFrame;
+    var decompressFrames2 = function decompressFrames3(parsedGif, buildImagePatches) {
+      return parsedGif.frames.filter(function(f) {
+        return f.image;
+      }).map(function(f) {
+        return decompressFrame(f, parsedGif.gct, buildImagePatches);
+      });
+    };
+    exports.decompressFrames = decompressFrames2;
+  }
+});
+
 // node_modules/.pnpm/mediabunny@1.61.0/node_modules/mediabunny/dist/modules/src/misc.js
 function assert(x) {
   if (!x) {
@@ -559,11 +1938,35 @@ var setInt64 = (view2, byteOffset, value, littleEndian) => {
     view2.setUint32(byteOffset + 4, value, true);
   }
 };
+var mapAsyncGenerator = (generator, map) => {
+  return {
+    async next() {
+      const result = await generator.next();
+      if (result.done) {
+        return { value: void 0, done: true };
+      } else {
+        return { value: map(result.value), done: false };
+      }
+    },
+    return() {
+      return generator.return();
+    },
+    throw(error) {
+      return generator.throw(error);
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    }
+  };
+};
 var clamp = (value, min, max) => {
   return Math.max(min, Math.min(max, value));
 };
 var lerp = (from, to, t) => {
   return from + (to - from) * t;
+};
+var modEuclid = (value, modulus) => {
+  return value - Math.floor(value / modulus) * modulus;
 };
 var UNDETERMINED_LANGUAGE = "und";
 var roundIfAlmostInteger = (value) => {
@@ -1343,6 +2746,32 @@ var writeAacSamplingFrequency = (bitstream, sampleRate) => {
 var findAacFrequencyIndex = (sampleRate) => {
   const index = aacFrequencyTable.indexOf(sampleRate);
   return index === -1 ? 15 : index;
+};
+var buildAdtsHeaderTemplate = (config) => {
+  const header = new Uint8Array(7);
+  const bitstream = new Bitstream(header);
+  const { coreObjectType, frequencyIndex, channelConfiguration } = config;
+  const profile = coreObjectType - 1;
+  bitstream.writeBits(12, 4095);
+  bitstream.writeBits(1, 0);
+  bitstream.writeBits(2, 0);
+  bitstream.writeBits(1, 1);
+  bitstream.writeBits(2, profile);
+  bitstream.writeBits(4, frequencyIndex);
+  bitstream.writeBits(1, 0);
+  bitstream.writeBits(3, channelConfiguration);
+  bitstream.writeBits(1, 0);
+  bitstream.writeBits(1, 0);
+  bitstream.writeBits(1, 0);
+  bitstream.writeBits(1, 0);
+  bitstream.skipBits(13);
+  bitstream.writeBits(11, 2047);
+  bitstream.writeBits(2, 0);
+  return { header, bitstream };
+};
+var writeAdtsFrameLength = (bitstream, frameLength) => {
+  bitstream.pos = 30;
+  bitstream.writeBits(13, frameLength);
 };
 
 // node_modules/.pnpm/mediabunny@1.61.0/node_modules/mediabunny/dist/modules/shared/ac3-misc.js
@@ -23415,6 +24844,175 @@ var VideoSampleSink = class extends BaseMediaSampleSink {
     return this.mediaSamplesAtTimestamps(timestamps, options);
   }
 };
+var CanvasSink = class {
+  /** Creates a new {@link CanvasSink} for the given {@link InputVideoTrack}. */
+  constructor(videoTrack, options = {}) {
+    this._rotation = 0;
+    this._flip = false;
+    this._initPromise = null;
+    this._nextCanvasIndex = 0;
+    if (!(videoTrack instanceof InputVideoTrack)) {
+      throw new TypeError("videoTrack must be an InputVideoTrack.");
+    }
+    if (options && typeof options !== "object") {
+      throw new TypeError("options must be an object.");
+    }
+    if (options.alpha !== void 0 && typeof options.alpha !== "boolean") {
+      throw new TypeError("options.alpha, when provided, must be a boolean.");
+    }
+    if (options.width !== void 0 && (!Number.isInteger(options.width) || options.width <= 0)) {
+      throw new TypeError("options.width, when defined, must be a positive integer.");
+    }
+    if (options.height !== void 0 && (!Number.isInteger(options.height) || options.height <= 0)) {
+      throw new TypeError("options.height, when defined, must be a positive integer.");
+    }
+    if (options.fit !== void 0 && !["fill", "contain", "cover"].includes(options.fit)) {
+      throw new TypeError('options.fit, when provided, must be one of "fill", "contain", or "cover".');
+    }
+    if (options.width !== void 0 && options.height !== void 0 && options.fit === void 0) {
+      throw new TypeError("When both options.width and options.height are provided, options.fit must also be provided.");
+    }
+    if (options.rotation !== void 0 && ![0, 90, 180, 270].includes(options.rotation)) {
+      throw new TypeError("options.rotation, when provided, must be 0, 90, 180 or 270.");
+    }
+    if (options.flip !== void 0 && typeof options.flip !== "boolean") {
+      throw new TypeError("options.flip, when provided, must be a boolean.");
+    }
+    if (options.crop !== void 0) {
+      validateCropRectangle(options.crop, "options.");
+    }
+    if (options.poolSize !== void 0 && (typeof options.poolSize !== "number" || !Number.isInteger(options.poolSize) || options.poolSize < 0)) {
+      throw new TypeError("poolSize must be a non-negative integer.");
+    }
+    if (options.decoderOptions !== void 0) {
+      validateVideoSinkDecoderOptions(options.decoderOptions);
+    }
+    this._videoTrack = videoTrack;
+    this._alpha = options.alpha ?? false;
+    this._options = options;
+    this._fit = options.fit ?? "fill";
+    this._videoSampleSink = new VideoSampleSink(videoTrack, options.decoderOptions);
+    this._canvasPool = Array.from({ length: options.poolSize ?? 0 }, () => null);
+  }
+  /** @internal */
+  _ensureInit() {
+    return this._initPromise ??= (async () => {
+      const options = this._options;
+      const videoTrack = this._videoTrack;
+      const rotation = options.rotation ?? await videoTrack.getRotation();
+      const flip = options.flip ?? await videoTrack.getFlip();
+      const squarePixelWidth = await videoTrack.getSquarePixelWidth();
+      const squarePixelHeight = await videoTrack.getSquarePixelHeight();
+      const [rotatedWidth, rotatedHeight] = rotation % 180 === 0 ? [squarePixelWidth, squarePixelHeight] : [squarePixelHeight, squarePixelWidth];
+      let crop = options.crop;
+      if (crop) {
+        crop = clampCropRectangle(crop, rotatedWidth, rotatedHeight);
+      }
+      let [width, height] = crop ? [crop.width, crop.height] : [rotatedWidth, rotatedHeight];
+      const originalAspectRatio = width / height;
+      if (options.width !== void 0 && options.height === void 0) {
+        width = options.width;
+        height = Math.round(width / originalAspectRatio);
+      } else if (options.width === void 0 && options.height !== void 0) {
+        height = options.height;
+        width = Math.round(height * originalAspectRatio);
+      } else if (options.width !== void 0 && options.height !== void 0) {
+        width = options.width;
+        height = options.height;
+      }
+      this._width = width;
+      this._height = height;
+      this._rotation = rotation;
+      this._flip = flip;
+      this._crop = crop;
+    })();
+  }
+  /** @internal */
+  _videoSampleToWrappedCanvas(sample) {
+    const width = this._width;
+    const height = this._height;
+    let canvas = this._canvasPool[this._nextCanvasIndex];
+    let canvasIsNew = false;
+    if (!canvas) {
+      if (typeof document !== "undefined") {
+        canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+      } else {
+        canvas = new OffscreenCanvas(width, height);
+      }
+      if (this._canvasPool.length > 0) {
+        this._canvasPool[this._nextCanvasIndex] = canvas;
+      }
+      canvasIsNew = true;
+    }
+    if (this._canvasPool.length > 0) {
+      this._nextCanvasIndex = (this._nextCanvasIndex + 1) % this._canvasPool.length;
+    }
+    const context = canvas.getContext("2d", {
+      alpha: this._alpha || isFirefox()
+      // Firefox has VideoFrame glitches with opaque canvases
+    });
+    assert(context);
+    sample._drawWithFitAndMipmapping(canvas, context, {
+      fit: this._fit,
+      rotation: this._rotation,
+      flip: this._flip,
+      crop: this._crop,
+      targetIsFresh: canvasIsNew,
+      fillBlack: !this._alpha && isFirefox()
+    });
+    const result = {
+      canvas,
+      timestamp: sample.timestamp,
+      duration: sample.duration
+    };
+    sample.close();
+    return result;
+  }
+  /**
+   * Retrieves a canvas with the video frame corresponding to the given timestamp, in seconds. More specifically,
+   * returns the last video frame (in presentation order) with a start timestamp less than or equal to the given
+   * timestamp. Returns null if the timestamp is before the track's first timestamp.
+   *
+   * @param timestamp - The timestamp used for retrieval, in seconds.
+   * @param options - Options used for the underlying packet retrieval.
+   */
+  async getCanvas(timestamp, options) {
+    validateTimestamp(timestamp);
+    await this._ensureInit();
+    const sample = await this._videoSampleSink.getSample(timestamp, options);
+    return sample && this._videoSampleToWrappedCanvas(sample);
+  }
+  /**
+   * Creates an async iterator that yields canvases with the video frames of this track in presentation order. This
+   * method will intelligently pre-decode a few frames ahead to enable fast iteration.
+   *
+   * @param startTimestamp - The timestamp in seconds at which to start yielding canvases (inclusive).
+   * @param endTimestamp - The timestamp in seconds at which to stop yielding canvases (exclusive).
+   * @param options - Options used for the underlying packet retrieval.
+   */
+  async *canvases(startTimestamp, endTimestamp, options) {
+    await this._ensureInit();
+    yield* mapAsyncGenerator(this._videoSampleSink.samples(startTimestamp, endTimestamp, options), (sample) => this._videoSampleToWrappedCanvas(sample));
+  }
+  /**
+   * Creates an async iterator that yields a canvas for each timestamp in the argument. This method uses an optimized
+   * decoding pipeline if these timestamps are monotonically sorted, decoding each packet at most once, and is
+   * therefore more efficient than manually getting the canvas for every timestamp. The iterator may yield null if
+   * no frame is available for a given timestamp.
+   *
+   * This method is good for sparse access of media data. If you want primarily sequential media access, prefer
+   * {@link CanvasSink.canvases} instead.
+   *
+   * @param timestamps - An iterable or async iterable of timestamps in seconds.
+   * @param options - Options used for the underlying packet retrieval.
+   */
+  async *canvasesAtTimestamps(timestamps, options) {
+    await this._ensureInit();
+    yield* mapAsyncGenerator(this._videoSampleSink.samplesAtTimestamps(timestamps, options), (sample) => sample && this._videoSampleToWrappedCanvas(sample));
+  }
+};
 var AudioDecoderWrapper = class extends DecoderWrapper {
   constructor(onSample, onError, codec, decoderConfig) {
     super(onSample, onError);
@@ -26457,6 +28055,82 @@ var Muxer = class {
       }
       timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
     }
+  }
+};
+
+// node_modules/.pnpm/mediabunny@1.61.0/node_modules/mediabunny/dist/modules/src/adts/adts-muxer.js
+var AdtsMuxer = class extends Muxer {
+  constructor(output, format) {
+    super(output);
+    this.header = null;
+    this.headerBitstream = null;
+    this.inputIsAdts = null;
+    this.format = format;
+  }
+  async start() {
+    const release = await this.mutex.acquire();
+    this.writer = await this.output._getRootWriter(true);
+    if (!metadataTagsAreEmpty(this.output._metadataTags)) {
+      const id3Writer = new Id3V2Writer(this.writer);
+      id3Writer.writeId3V2Tag(this.output._metadataTags);
+    }
+    release();
+  }
+  async getMimeType() {
+    return "audio/aac";
+  }
+  async addEncodedVideoPacket() {
+    throw new Error("ADTS does not support video.");
+  }
+  async addEncodedAudioPacket(track, packet, meta) {
+    const release = await this.mutex.acquire();
+    try {
+      this.validateTimestamp(track, packet.timestamp, packet.type === "key");
+      if (this.inputIsAdts === null) {
+        validateAudioChunkMetadata(meta, track.source._codec);
+        const description = meta?.decoderConfig?.description;
+        this.inputIsAdts = !description;
+        if (!this.inputIsAdts) {
+          const config = parseAacAudioSpecificConfig(toUint8Array(description));
+          const template = buildAdtsHeaderTemplate(config);
+          this.header = template.header;
+          this.headerBitstream = template.bitstream;
+        }
+      }
+      if (this.inputIsAdts) {
+        const startPos = this.writer.getPos();
+        this.writer.write(packet.data);
+        if (this.format._options.onFrame) {
+          this.format._options.onFrame(packet.data, startPos);
+        }
+      } else {
+        assert(this.header);
+        const frameLength = packet.data.byteLength + this.header.byteLength;
+        writeAdtsFrameLength(this.headerBitstream, frameLength);
+        const startPos = this.writer.getPos();
+        this.writer.write(this.header);
+        this.writer.write(packet.data);
+        if (this.format._options.onFrame) {
+          const frameBytes = new Uint8Array(frameLength);
+          frameBytes.set(this.header, 0);
+          frameBytes.set(packet.data, this.header.byteLength);
+          this.format._options.onFrame(frameBytes, startPos);
+        }
+      }
+      await this.writer.flush();
+    } finally {
+      release();
+    }
+  }
+  async addSubtitleCue() {
+    throw new Error("ADTS does not support subtitles.");
+  }
+  async finalize() {
+    const release = await this.mutex.acquire();
+    if (this.inputIsAdts === null) {
+      throw new Error("Cannot finalize an empty ADTS file: not a single packet was added.");
+    }
+    release();
   }
 };
 
@@ -31651,6 +33325,585 @@ var OggMuxer = class extends Muxer {
   }
 };
 
+// node_modules/.pnpm/mediabunny@1.61.0/node_modules/mediabunny/dist/modules/src/mpeg-ts/mpeg-ts-muxer.js
+var PAT_PID = 0;
+var PMT_PID = 4096;
+var FIRST_TRACK_PID = 256;
+var VIDEO_STREAM_ID_BASE = 224;
+var AUDIO_STREAM_ID_BASE = 192;
+var AVC_AUD_NAL = new Uint8Array([9, 240]);
+var HEVC_AUD_NAL = new Uint8Array([70, 1]);
+var MpegTsMuxer = class extends Muxer {
+  constructor(output, format) {
+    super(output);
+    this.trackDatas = [];
+    this.tablesWritten = false;
+    this.continuityCounters = /* @__PURE__ */ new Map();
+    this.packetBuffer = new Uint8Array(TS_PACKET_SIZE);
+    this.packetView = toDataView(this.packetBuffer);
+    this.allTracksKnown = promiseWithResolvers();
+    this.videoTrackIndex = 0;
+    this.audioTrackIndex = 0;
+    this.adaptationFieldBuffer = new Uint8Array(184);
+    this.payloadBuffer = new Uint8Array(184);
+    this.format = format;
+  }
+  async start() {
+    const release = await this.mutex.acquire();
+    this.writer = await this.output._getRootWriter(true);
+    release();
+  }
+  async getMimeType() {
+    await this.allTracksKnown.promise;
+    return buildMpegTsMimeType(this.trackDatas.map((x) => x.codecString));
+  }
+  getVideoTrackData(track, meta) {
+    const existingTrackData = this.trackDatas.find((x) => x.track === track);
+    if (existingTrackData) {
+      return existingTrackData;
+    }
+    validateVideoChunkMetadata(meta, track.source._codec);
+    assert(meta?.decoderConfig);
+    const codec = track.source._codec;
+    assert(codec === "avc" || codec === "hevc");
+    const streamType = codec === "avc" ? 27 : 36;
+    const pid = FIRST_TRACK_PID + this.trackDatas.length;
+    const streamId = VIDEO_STREAM_ID_BASE + this.videoTrackIndex++;
+    const newTrackData = {
+      track,
+      pid,
+      streamType,
+      streamId,
+      codecString: meta.decoderConfig.codec,
+      timestampProcessingQueue: [],
+      packetQueue: [],
+      inputIsAnnexB: null,
+      inputIsAdts: null,
+      avcDecoderConfig: null,
+      hevcDecoderConfig: null,
+      adtsHeader: null,
+      adtsHeaderBitstream: null,
+      firstPacketWritten: false,
+      closed: false
+    };
+    this.trackDatas.push(newTrackData);
+    if (this.allTracksAreKnown()) {
+      this.allTracksKnown.resolve();
+    }
+    return newTrackData;
+  }
+  getAudioTrackData(track, meta) {
+    const existingTrackData = this.trackDatas.find((x) => x.track === track);
+    if (existingTrackData) {
+      return existingTrackData;
+    }
+    validateAudioChunkMetadata(meta, track.source._codec);
+    assert(meta?.decoderConfig);
+    const codec = track.source._codec;
+    assert(codec === "aac" || codec === "mp3" || codec === "ac3" || codec === "eac3" || codec === "dts");
+    let streamType;
+    let streamId;
+    switch (codec) {
+      case "aac":
+        {
+          streamType = 15;
+          streamId = AUDIO_STREAM_ID_BASE + this.audioTrackIndex++;
+        }
+        ;
+        break;
+      case "mp3":
+        {
+          streamType = 3;
+          streamId = AUDIO_STREAM_ID_BASE + this.audioTrackIndex++;
+        }
+        ;
+        break;
+      case "ac3":
+        {
+          streamType = 129;
+          streamId = 189;
+        }
+        ;
+        break;
+      case "eac3":
+        {
+          streamType = 135;
+          streamId = 189;
+        }
+        ;
+        break;
+      case "dts":
+        {
+          streamType = 130;
+          streamId = 189;
+        }
+        ;
+        break;
+    }
+    const pid = FIRST_TRACK_PID + this.trackDatas.length;
+    const newTrackData = {
+      track,
+      pid,
+      streamType,
+      streamId,
+      codecString: meta.decoderConfig.codec,
+      timestampProcessingQueue: [],
+      packetQueue: [],
+      inputIsAnnexB: null,
+      inputIsAdts: null,
+      avcDecoderConfig: null,
+      hevcDecoderConfig: null,
+      adtsHeader: null,
+      adtsHeaderBitstream: null,
+      firstPacketWritten: false,
+      closed: false
+    };
+    this.trackDatas.push(newTrackData);
+    if (this.allTracksAreKnown()) {
+      this.allTracksKnown.resolve();
+    }
+    return newTrackData;
+  }
+  async addEncodedVideoPacket(track, packet, meta) {
+    const release = await this.mutex.acquire();
+    try {
+      const trackData = this.getVideoTrackData(track, meta);
+      this.validateTimestamp(trackData.track, packet.timestamp, packet.type === "key");
+      const preparedData = this.prepareVideoPacket(trackData, packet, meta);
+      if (packet.type === "key") {
+        await this.flushTimestampQueue(trackData);
+      }
+      trackData.timestampProcessingQueue.push({
+        data: preparedData,
+        presentationTimestamp: packet.timestamp,
+        decodeTimestamp: null,
+        isKeyframe: packet.type === "key"
+      });
+    } finally {
+      release();
+    }
+  }
+  async addEncodedAudioPacket(track, packet, meta) {
+    const release = await this.mutex.acquire();
+    try {
+      const trackData = this.getAudioTrackData(track, meta);
+      this.validateTimestamp(trackData.track, packet.timestamp, packet.type === "key");
+      const preparedData = this.prepareAudioPacket(trackData, packet, meta);
+      if (packet.type === "key") {
+        await this.flushTimestampQueue(trackData);
+      }
+      trackData.timestampProcessingQueue.push({
+        data: preparedData,
+        presentationTimestamp: packet.timestamp,
+        decodeTimestamp: null,
+        isKeyframe: packet.type === "key"
+      });
+    } finally {
+      release();
+    }
+  }
+  async addSubtitleCue() {
+    throw new Error("MPEG-TS does not support subtitles.");
+  }
+  prepareVideoPacket(trackData, packet, meta) {
+    const codec = trackData.track.source._codec;
+    if (trackData.inputIsAnnexB === null) {
+      const description = meta?.decoderConfig?.description;
+      trackData.inputIsAnnexB = !description;
+      if (!trackData.inputIsAnnexB) {
+        const bytes2 = toUint8Array(description);
+        if (codec === "avc") {
+          trackData.avcDecoderConfig = deserializeAvcDecoderConfigurationRecord(bytes2);
+        } else {
+          trackData.hevcDecoderConfig = deserializeHevcDecoderConfigurationRecord(bytes2);
+        }
+      }
+    }
+    if (trackData.inputIsAnnexB) {
+      return this.prepareAnnexBVideoPacket(packet.data, codec);
+    } else {
+      return this.prepareLengthPrefixedVideoPacket(trackData, packet, codec);
+    }
+  }
+  prepareAnnexBVideoPacket(data, codec) {
+    const nalUnits = [];
+    for (const loc of iterateNalUnitsInAnnexB(data)) {
+      const nalUnit = data.subarray(loc.offset, loc.offset + loc.length);
+      const isAud = codec === "avc" ? extractNalUnitTypeForAvc(nalUnit[0]) === AvcNalUnitType.AUD : extractNalUnitTypeForHevc(nalUnit[0]) === HevcNalUnitType.AUD_NUT;
+      if (!isAud) {
+        nalUnits.push(nalUnit);
+      }
+    }
+    const aud = codec === "avc" ? AVC_AUD_NAL : HEVC_AUD_NAL;
+    nalUnits.unshift(aud);
+    return concatNalUnitsInAnnexB(nalUnits);
+  }
+  prepareLengthPrefixedVideoPacket(trackData, packet, codec) {
+    const data = packet.data;
+    const lengthSize = codec === "avc" ? trackData.avcDecoderConfig.lengthSizeMinusOne + 1 : trackData.hevcDecoderConfig.lengthSizeMinusOne + 1;
+    const nalUnits = [];
+    for (const loc of iterateNalUnitsInLengthPrefixed(data, lengthSize)) {
+      const nalUnit = data.subarray(loc.offset, loc.offset + loc.length);
+      const isAud = codec === "avc" ? extractNalUnitTypeForAvc(nalUnit[0]) === AvcNalUnitType.AUD : extractNalUnitTypeForHevc(nalUnit[0]) === HevcNalUnitType.AUD_NUT;
+      if (!isAud) {
+        nalUnits.push(nalUnit);
+      }
+    }
+    if (packet.type === "key") {
+      if (codec === "avc") {
+        const config = trackData.avcDecoderConfig;
+        for (const pps of config.pictureParameterSets) {
+          nalUnits.unshift(pps);
+        }
+        for (const sps of config.sequenceParameterSets) {
+          nalUnits.unshift(sps);
+        }
+      } else {
+        const config = trackData.hevcDecoderConfig;
+        for (const arr of config.arrays) {
+          if (arr.nalUnitType === HevcNalUnitType.PPS_NUT) {
+            for (const nal of arr.nalUnits) {
+              nalUnits.unshift(nal);
+            }
+          }
+        }
+        for (const arr of config.arrays) {
+          if (arr.nalUnitType === HevcNalUnitType.SPS_NUT) {
+            for (const nal of arr.nalUnits) {
+              nalUnits.unshift(nal);
+            }
+          }
+        }
+        for (const arr of config.arrays) {
+          if (arr.nalUnitType === HevcNalUnitType.VPS_NUT) {
+            for (const nal of arr.nalUnits) {
+              nalUnits.unshift(nal);
+            }
+          }
+        }
+      }
+    }
+    const aud = codec === "avc" ? AVC_AUD_NAL : HEVC_AUD_NAL;
+    nalUnits.unshift(aud);
+    return concatNalUnitsInAnnexB(nalUnits);
+  }
+  prepareAudioPacket(trackData, packet, meta) {
+    const codec = trackData.track.source._codec;
+    if (codec === "mp3" || codec === "ac3" || codec === "eac3" || codec === "dts") {
+      return packet.data;
+    }
+    if (trackData.inputIsAdts === null) {
+      const description = meta?.decoderConfig?.description;
+      trackData.inputIsAdts = !description;
+      if (!trackData.inputIsAdts) {
+        const config = parseAacAudioSpecificConfig(toUint8Array(description));
+        const template = buildAdtsHeaderTemplate(config);
+        trackData.adtsHeader = template.header;
+        trackData.adtsHeaderBitstream = template.bitstream;
+      }
+    }
+    if (trackData.inputIsAdts) {
+      return packet.data;
+    }
+    assert(trackData.adtsHeader);
+    assert(trackData.adtsHeaderBitstream);
+    const header = trackData.adtsHeader;
+    const frameLength = packet.data.byteLength + header.byteLength;
+    writeAdtsFrameLength(trackData.adtsHeaderBitstream, frameLength);
+    const result = new Uint8Array(frameLength);
+    result.set(header, 0);
+    result.set(packet.data, header.byteLength);
+    return result;
+  }
+  allTracksAreKnown() {
+    for (const track of this.output.tracks) {
+      if (!track.source._closed && !this.trackDatas.some((x) => x.track === track)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  async flushTimestampQueue(trackData, alsoInterleave = true) {
+    if (trackData.timestampProcessingQueue.length === 0) {
+      return;
+    }
+    const sortedTimestamps = trackData.timestampProcessingQueue.map((packet) => packet.presentationTimestamp).sort((a, b) => a - b);
+    for (let i = 0; i < trackData.timestampProcessingQueue.length; i++) {
+      const queuedPacket = trackData.timestampProcessingQueue[i];
+      queuedPacket.decodeTimestamp = sortedTimestamps[i];
+      trackData.packetQueue.push(queuedPacket);
+    }
+    trackData.timestampProcessingQueue.length = 0;
+    if (alsoInterleave) {
+      await this.interleavePackets();
+    }
+  }
+  async interleavePackets(isFinalCall = false) {
+    if (!this.tablesWritten) {
+      if (!this.allTracksAreKnown() && !isFinalCall) {
+        return;
+      }
+      this.writeTables();
+    }
+    outer: while (true) {
+      let trackWithMinTimestamp = null;
+      let minTimestamp = Infinity;
+      for (const trackData of this.trackDatas) {
+        if (!isFinalCall && trackData.packetQueue.length === 0 && !trackData.closed) {
+          break outer;
+        }
+        if (trackData.packetQueue.length > 0 && trackData.packetQueue[0].presentationTimestamp < minTimestamp) {
+          trackWithMinTimestamp = trackData;
+          minTimestamp = trackData.packetQueue[0].presentationTimestamp;
+        }
+      }
+      if (!trackWithMinTimestamp) {
+        break;
+      }
+      const queuedPacket = trackWithMinTimestamp.packetQueue.shift();
+      this.writePesPacket(trackWithMinTimestamp, queuedPacket);
+    }
+    if (!isFinalCall) {
+      await this.writer.flush();
+    }
+  }
+  writeTables() {
+    assert(!this.tablesWritten);
+    this.writePsiSection(PAT_PID, PAT_SECTION);
+    this.writePsiSection(PMT_PID, buildPmt(this.trackDatas));
+    this.tablesWritten = true;
+  }
+  writePsiSection(pid, section) {
+    let offset = 0;
+    let isFirst = true;
+    while (offset < section.length) {
+      const pointerFieldSize = isFirst ? 1 : 0;
+      const availablePayload = 184 - pointerFieldSize;
+      const remainingData = section.length - offset;
+      const chunkSize = Math.min(availablePayload, remainingData);
+      let payload;
+      if (isFirst) {
+        payload = this.payloadBuffer.subarray(0, 1 + chunkSize);
+        payload[0] = 0;
+        payload.set(section.subarray(offset, offset + chunkSize), 1);
+      } else {
+        payload = section.subarray(offset, offset + chunkSize);
+      }
+      this.writeTsPacket(pid, isFirst, null, payload);
+      offset += chunkSize;
+      isFirst = false;
+    }
+  }
+  writePesPacket(trackData, queuedPacket) {
+    const includeDts = trackData.track.type === "video";
+    const headerDataLength = includeDts ? 10 : 5;
+    const pesHeaderBuffer = new Uint8Array(9 + headerDataLength);
+    const pesView = toDataView(pesHeaderBuffer);
+    const ptsDtsBitstream = new Bitstream(pesHeaderBuffer.subarray(9));
+    setUint24(pesView, 0, 1, false);
+    pesHeaderBuffer[3] = trackData.streamId;
+    const pesPacketLength = trackData.track.type === "video" ? 0 : Math.min(8 + queuedPacket.data.length, 65535);
+    pesView.setUint16(4, pesPacketLength, false);
+    pesView.setUint8(6, 132);
+    pesView.setUint8(7, includeDts ? 192 : 128);
+    pesView.setUint8(8, headerDataLength);
+    const unwrappedPts = Math.round(queuedPacket.presentationTimestamp * TIMESCALE);
+    const pts = modEuclid(unwrappedPts, TIMESTAMP_MODULUS);
+    ptsDtsBitstream.pos = 0;
+    ptsDtsBitstream.writeBits(4, includeDts ? 3 : 2);
+    ptsDtsBitstream.writeBits(3, Math.floor(pts / 2 ** 30));
+    ptsDtsBitstream.writeBits(1, 1);
+    ptsDtsBitstream.writeBits(15, Math.floor(pts / 2 ** 15) % 2 ** 15);
+    ptsDtsBitstream.writeBits(1, 1);
+    ptsDtsBitstream.writeBits(15, pts % 2 ** 15);
+    ptsDtsBitstream.writeBits(1, 1);
+    if (includeDts) {
+      assert(queuedPacket.decodeTimestamp !== null);
+      const unwrappedDts = Math.round(queuedPacket.decodeTimestamp * TIMESCALE);
+      const dts = modEuclid(unwrappedDts, TIMESTAMP_MODULUS);
+      ptsDtsBitstream.writeBits(4, 1);
+      ptsDtsBitstream.writeBits(3, Math.floor(dts / 2 ** 30));
+      ptsDtsBitstream.writeBits(1, 1);
+      ptsDtsBitstream.writeBits(15, Math.floor(dts / 2 ** 15) % 2 ** 15);
+      ptsDtsBitstream.writeBits(1, 1);
+      ptsDtsBitstream.writeBits(15, dts % 2 ** 15);
+      ptsDtsBitstream.writeBits(1, 1);
+    }
+    const totalLength = pesHeaderBuffer.length + queuedPacket.data.length;
+    let offset = 0;
+    let isFirstTsPacket = true;
+    while (offset < totalLength) {
+      const pusi = isFirstTsPacket;
+      const remainingData = totalLength - offset;
+      const randomAccessIndicator = isFirstTsPacket && queuedPacket.isKeyframe;
+      const discontinuityIndicator = isFirstTsPacket && !trackData.firstPacketWritten;
+      const basePaddingNeeded = Math.max(0, 184 - remainingData);
+      let adaptationFieldSize;
+      if (randomAccessIndicator || discontinuityIndicator) {
+        adaptationFieldSize = Math.max(2, basePaddingNeeded);
+      } else {
+        adaptationFieldSize = basePaddingNeeded;
+      }
+      let adaptationField = null;
+      if (adaptationFieldSize > 0) {
+        const buf = this.adaptationFieldBuffer;
+        if (adaptationFieldSize === 1) {
+          buf[0] = 0;
+        } else {
+          buf[0] = adaptationFieldSize - 1;
+          buf[1] = Number(discontinuityIndicator) << 7 | Number(randomAccessIndicator) << 6;
+          buf.fill(255, 2, adaptationFieldSize);
+        }
+        adaptationField = buf.subarray(0, adaptationFieldSize);
+      }
+      const payloadSize = Math.min(184 - adaptationFieldSize, remainingData);
+      const payload = this.payloadBuffer.subarray(0, payloadSize);
+      let payloadOffset = 0;
+      if (offset < pesHeaderBuffer.length) {
+        const headerBytes = Math.min(pesHeaderBuffer.length - offset, payloadSize);
+        payload.set(pesHeaderBuffer.subarray(offset, offset + headerBytes), 0);
+        payloadOffset = headerBytes;
+      }
+      const dataStart = Math.max(0, offset - pesHeaderBuffer.length);
+      const dataEnd = dataStart + (payloadSize - payloadOffset);
+      if (payloadOffset < payloadSize) {
+        payload.set(queuedPacket.data.subarray(dataStart, dataEnd), payloadOffset);
+      }
+      this.writeTsPacket(trackData.pid, pusi, adaptationField, payload);
+      offset += payloadSize;
+      isFirstTsPacket = false;
+    }
+    trackData.firstPacketWritten = true;
+  }
+  writeTsPacket(pid, pusi, adaptationField, payload) {
+    const cc = this.continuityCounters.get(pid) ?? 0;
+    const hasPayload = payload.length > 0;
+    const adaptCtrl = adaptationField ? hasPayload ? 3 : 2 : hasPayload ? 1 : 0;
+    this.packetBuffer[0] = 71;
+    this.packetView.setUint16(1, (pusi ? 16384 : 0) | pid & 8191, false);
+    this.packetBuffer[3] = adaptCtrl << 4 | cc & 15;
+    if (hasPayload) {
+      this.continuityCounters.set(pid, cc + 1 & 15);
+    }
+    let offset = 4;
+    if (adaptationField) {
+      this.packetBuffer.set(adaptationField, offset);
+      offset += adaptationField.length;
+    }
+    this.packetBuffer.set(payload, offset);
+    offset += payload.length;
+    if (offset < TS_PACKET_SIZE) {
+      this.packetBuffer.fill(255, offset);
+    }
+    const startPos = this.writer.getPos();
+    this.writer.write(this.packetBuffer);
+    if (this.format._options.onPacket) {
+      this.format._options.onPacket(this.packetBuffer.slice(), startPos);
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  async onTrackClose(track) {
+    const release = await this.mutex.acquire();
+    const trackData = this.trackDatas.find((x) => x.track === track);
+    if (trackData) {
+      trackData.closed = true;
+      await this.flushTimestampQueue(trackData, false);
+    }
+    if (this.allTracksAreKnown()) {
+      this.allTracksKnown.resolve();
+    }
+    await this.interleavePackets();
+    release();
+  }
+  async finalize() {
+    const release = await this.mutex.acquire();
+    this.allTracksKnown.resolve();
+    for (const trackData of this.trackDatas) {
+      trackData.closed = true;
+      await this.flushTimestampQueue(trackData, false);
+    }
+    await this.interleavePackets(true);
+    release();
+  }
+};
+var MPEG_TS_CRC_POLYNOMIAL = 79764919;
+var MPEG_TS_CRC_TABLE = new Uint32Array(256);
+for (let n = 0; n < 256; n++) {
+  let crc = n << 24;
+  for (let k = 0; k < 8; k++) {
+    crc = crc & 2147483648 ? crc << 1 ^ MPEG_TS_CRC_POLYNOMIAL : crc << 1;
+  }
+  MPEG_TS_CRC_TABLE[n] = crc >>> 0 & 4294967295;
+}
+var computeMpegTsCrc32 = (data) => {
+  let crc = 4294967295;
+  for (let i = 0; i < data.length; i++) {
+    const byte = data[i];
+    crc = (crc << 8 ^ MPEG_TS_CRC_TABLE[crc >>> 24 ^ byte]) >>> 0;
+  }
+  return crc;
+};
+var PAT_SECTION = new Uint8Array(16);
+{
+  const view2 = toDataView(PAT_SECTION);
+  PAT_SECTION[0] = 0;
+  view2.setUint16(1, 45069, false);
+  view2.setUint16(3, 1, false);
+  PAT_SECTION[5] = 193;
+  PAT_SECTION[6] = 0;
+  PAT_SECTION[7] = 0;
+  view2.setUint16(8, 1, false);
+  view2.setUint16(10, 57344 | PMT_PID & 8191, false);
+  view2.setUint32(12, computeMpegTsCrc32(PAT_SECTION.subarray(0, 12)), false);
+}
+var buildPmt = (trackDatas) => {
+  let totalEsBytes = 0;
+  for (const trackData of trackDatas) {
+    totalEsBytes += 5;
+    if (trackData.streamType === 129) {
+      totalEsBytes += AC3_REGISTRATION_DESCRIPTOR.length;
+    } else if (trackData.streamType === 135) {
+      totalEsBytes += EAC3_REGISTRATION_DESCRIPTOR.length;
+    }
+  }
+  const sectionLength = 9 + totalEsBytes + 4;
+  const section = new Uint8Array(3 + sectionLength - 4);
+  const view2 = toDataView(section);
+  section[0] = 2;
+  view2.setUint16(1, 45056 | sectionLength & 4095, false);
+  view2.setUint16(3, 1, false);
+  section[5] = 193;
+  section[6] = 0;
+  section[7] = 0;
+  view2.setUint16(8, 57344 | 8191, false);
+  view2.setUint16(10, 61440, false);
+  let offset = 12;
+  for (const trackData of trackDatas) {
+    section[offset++] = trackData.streamType;
+    view2.setUint16(offset, 57344 | trackData.pid & 8191, false);
+    offset += 2;
+    if (trackData.streamType === 129) {
+      view2.setUint16(offset, 61440 | AC3_REGISTRATION_DESCRIPTOR.length, false);
+      offset += 2;
+      section.set(AC3_REGISTRATION_DESCRIPTOR, offset);
+      offset += AC3_REGISTRATION_DESCRIPTOR.length;
+    } else if (trackData.streamType === 135) {
+      view2.setUint16(offset, 61440 | EAC3_REGISTRATION_DESCRIPTOR.length, false);
+      offset += 2;
+      section.set(EAC3_REGISTRATION_DESCRIPTOR, offset);
+      offset += EAC3_REGISTRATION_DESCRIPTOR.length;
+    } else {
+      view2.setUint16(offset, 61440, false);
+      offset += 2;
+    }
+  }
+  const crc = computeMpegTsCrc32(section);
+  const result = new Uint8Array(section.length + 4);
+  result.set(section, 0);
+  toDataView(result).setUint32(section.length, crc, false);
+  return result;
+};
+
 // node_modules/.pnpm/mediabunny@1.61.0/node_modules/mediabunny/dist/modules/src/wave/riff-writer.js
 var RiffWriter = class {
   constructor(writer) {
@@ -33084,6 +35337,44 @@ var VideoSampleSource = class extends VideoSource {
     return this._encoder.flushAndClose(forceClose);
   }
 };
+var CanvasSource = class extends VideoSource {
+  /**
+   * Creates a new {@link CanvasSource} from a canvas element or `OffscreenCanvas` whose samples are encoded
+   * according to the specified {@link VideoEncodingConfig}.
+   */
+  constructor(canvas, encodingConfig) {
+    if (!(typeof HTMLCanvasElement !== "undefined" && canvas instanceof HTMLCanvasElement) && !(typeof OffscreenCanvas !== "undefined" && canvas instanceof OffscreenCanvas)) {
+      throw new TypeError("canvas must be an HTMLCanvasElement or OffscreenCanvas.");
+    }
+    validateVideoEncodingConfig(encodingConfig);
+    super(encodingConfig.codec);
+    this._encoder = new VideoEncoderWrapper(this, encodingConfig);
+    this._canvas = canvas;
+  }
+  /**
+   * Captures the current canvas state as a video sample (frame), encodes it and adds it to the output.
+   *
+   * @param timestamp - The timestamp of the sample, in seconds.
+   * @param duration - The duration of the sample, in seconds.
+   *
+   * @returns A Promise that resolves once the output is ready to receive more samples. You should await this Promise
+   * to respect writer and encoder backpressure.
+   */
+  add(timestamp, duration = 0, encodeOptions) {
+    if (!Number.isFinite(timestamp)) {
+      throw new TypeError("timestamp must be a finite number.");
+    }
+    if (!Number.isFinite(duration) || duration < 0) {
+      throw new TypeError("duration must be a non-negative number.");
+    }
+    const sample = new VideoSample(this._canvas, { timestamp, duration });
+    return this._encoder.add(sample, true, encodeOptions);
+  }
+  /** @internal */
+  _flushAndClose(forceClose) {
+    return this._encoder.flushAndClose(forceClose);
+  }
+};
 var AudioSource = class extends MediaSource {
   /** Internal constructor. */
   constructor(codec) {
@@ -34056,6 +36347,53 @@ var OggOutputFormat = class extends OutputFormat {
     return "none";
   }
 };
+var AdtsOutputFormat = class extends OutputFormat {
+  /** Creates a new {@link AdtsOutputFormat} configured with the specified `options`. */
+  constructor(options = {}) {
+    if (!options || typeof options !== "object") {
+      throw new TypeError("options must be an object.");
+    }
+    if (options.onFrame !== void 0 && typeof options.onFrame !== "function") {
+      throw new TypeError("options.onFrame, when provided, must be a function.");
+    }
+    super();
+    this._options = options;
+  }
+  /** @internal */
+  _createMuxer(output) {
+    return new AdtsMuxer(output, this);
+  }
+  /** @internal */
+  get _name() {
+    return "ADTS";
+  }
+  getSupportedTrackCounts() {
+    return {
+      video: { min: 0, max: 0 },
+      audio: { min: 1, max: 1 },
+      subtitle: { min: 0, max: 0 },
+      total: { min: 1, max: 1 }
+    };
+  }
+  get fileExtension() {
+    return ".aac";
+  }
+  get mimeType() {
+    return "audio/aac";
+  }
+  getSupportedCodecs() {
+    return ["aac"];
+  }
+  get supportsVideoTransformationMetadata() {
+    return false;
+  }
+  get supportsTimestampedMediaData() {
+    return false;
+  }
+  get negativeTimestampSupport() {
+    return null;
+  }
+};
 var FlacOutputFormat = class extends OutputFormat {
   /** Creates a new {@link FlacOutputFormat} configured with the specified `options`. */
   constructor(options = {}) {
@@ -34101,6 +36439,59 @@ var FlacOutputFormat = class extends OutputFormat {
   }
   get negativeTimestampSupport() {
     return null;
+  }
+};
+var MpegTsOutputFormat = class extends OutputFormat {
+  /** Creates a new {@link MpegTsOutputFormat} configured with the specified `options`. */
+  constructor(options = {}) {
+    if (!options || typeof options !== "object") {
+      throw new TypeError("options must be an object.");
+    }
+    if (options.onPacket !== void 0 && typeof options.onPacket !== "function") {
+      throw new TypeError("options.onPacket, when provided, must be a function.");
+    }
+    super();
+    this._options = options;
+  }
+  /** @internal */
+  _createMuxer(output) {
+    return new MpegTsMuxer(output, this);
+  }
+  /** @internal */
+  get _name() {
+    return "MPEG-TS";
+  }
+  getSupportedTrackCounts() {
+    const maxVideo = 16;
+    const maxAudio = 32;
+    const maxTotal = maxVideo + maxAudio;
+    return {
+      video: { min: 0, max: maxVideo },
+      audio: { min: 0, max: maxAudio },
+      subtitle: { min: 0, max: 0 },
+      total: { min: 0, max: maxTotal }
+    };
+  }
+  get fileExtension() {
+    return ".ts";
+  }
+  get mimeType() {
+    return "video/MP2T";
+  }
+  getSupportedCodecs() {
+    return [
+      ...VIDEO_CODECS.filter((codec) => ["avc", "hevc"].includes(codec)),
+      ...AUDIO_CODECS.filter((codec) => ["aac", "mp3", "ac3", "eac3", "dts"].includes(codec))
+    ];
+  }
+  get supportsVideoTransformationMetadata() {
+    return false;
+  }
+  get supportsTimestampedMediaData() {
+    return true;
+  }
+  get negativeTimestampSupport() {
+    return "prefer-non-negative";
   }
 };
 
@@ -36479,21 +38870,41 @@ function assert2(x) {
     throw new Error("Assertion failed.");
   }
 }
+
+// scripts/media-vendor.js
+var import_gifenc = __toESM(require_gifenc());
+var import_gifuct_js = __toESM(require_lib2());
+var export_GIFEncoder = import_gifenc.GIFEncoder;
+var export_applyPalette = import_gifenc.applyPalette;
+var export_decompressFrames = import_gifuct_js.decompressFrames;
+var export_parseGIF = import_gifuct_js.parseGIF;
+var export_quantize = import_gifenc.quantize;
 export {
   ALL_FORMATS,
+  AdtsOutputFormat,
   BlobSource,
+  CanvasSink,
+  CanvasSource,
   Conversion,
   FlacOutputFormat,
+  export_GIFEncoder as GIFEncoder,
   Input,
+  MkvOutputFormat,
+  MovOutputFormat,
   Mp3OutputFormat,
   Mp4OutputFormat,
+  MpegTsOutputFormat,
   OggOutputFormat,
   Output,
   Quality,
   StreamTarget,
   WavOutputFormat,
   WebMOutputFormat,
+  export_applyPalette as applyPalette,
   canEncodeAudio,
   canEncodeVideo,
+  export_decompressFrames as decompressFrames,
+  export_parseGIF as parseGIF,
+  export_quantize as quantize,
   registerMp3Encoder
 };

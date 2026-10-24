@@ -25,6 +25,8 @@ REQUIRED_BUNDLES = {
     "vendor/generated/media-vendor.js.LEGAL.txt",
     "vendor/generated/MEDIABUNNY-LICENSE",
     "vendor/generated/MP3-ENCODER-LICENSE",
+    "vendor/generated/GIFENC-LICENSE",
+    "vendor/generated/GIFUCT-LICENSE",
     "vendor/generated/UTIF-LICENSE",
     "vendor/generated/PAKO-LICENSE",
     "vendor/generated/PAKO-ZLIB-NOTICE",

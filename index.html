@@ -41,12 +41,12 @@
         <p class="intro" data-i18n="intro">Convert and optimize files locally.</p>
       </header>
 
-      <input id="file-input" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.avif,.gif,.tif,.tiff,.heic,.heif,.pdf,.mp3,.wav,.ogg,.flac,.mp4,.webm,.docx,.xlsx,.pptx" hidden>
+      <input id="file-input" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.avif,.bmp,.gif,.tif,.tiff,.heic,.heif,.pdf,.mp3,.m4a,audio/mp4,.aac,audio/aac,.wav,.ogg,.flac,.mp4,video/mp4,.mov,video/quicktime,.webm,video/webm,.mkv,video/x-matroska,.ts,video/mp2t,.docx,.xlsx,.pptx" hidden>
       <section id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Choose a file" data-i18n-aria-label="chooseFile">
         <svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 15h8m-4-4v8"/></svg>
         <strong id="drop-label">Drop a file here</strong>
         <span class="drop-help" data-i18n="orChoose">or click to choose</span>
-        <small class="drop-help" data-i18n="supportedFormats">Images, PDF, MP3, WAV, DOCX and XLSX</small>
+        <small class="drop-help" data-i18n="supportedFormats">Images, PDF, audio, video and Office</small>
       </section>
       <div class="clipboard-action-row">
         <button id="paste-image" class="clipboard-action" type="button">

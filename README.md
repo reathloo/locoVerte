@@ -2,6 +2,19 @@
 
 Convert and compress images, PDFs, Office documents, audio, and video right in your browser (subject to browser codec support). Files are processed locally, even offline; no upload is needed for conversion.
 
+## Supported conversions
+
+| Input | Local output options |
+| --- | --- |
+| JPEG, PNG, WebP, AVIF, BMP, GIF, TIFF, HEIC | JPEG, PNG, WebP, GIF, AVIF where supported, PDF |
+| Animated GIF | MP4, MOV, WebM, MKV, MPEG-TS |
+| PDF | optimized PDF, selectable text, JPG/PNG/WebP page archive, AVIF where supported |
+| MP3, M4A, AAC, OGG, FLAC, WAV | MP3, M4A, AAC, OGG, FLAC, WAV |
+| MP4, MOV, WebM, MKV, MPEG-TS | MP4, MOV, WebM, MKV, MPEG-TS, animated GIF, JPG/PNG/WebP frame, or extracted audio |
+| DOCX, XLSX, PPTX | simplified PDF and text/CSV exports |
+
+Media options are shown only when the browser can encode the required codec. GIF and MP3 encoding are bundled; M4A/AAC and video codecs use local browser support. Converting GIF to another image format uses its first frame; converting it to a video preserves the animation.
+
 ## Install the test version
 
 Download `locoverte-0.2.3.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases)** and unzip it.

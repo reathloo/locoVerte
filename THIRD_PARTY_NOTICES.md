@@ -8,6 +8,8 @@ The original locoVerte code is licensed under GPL-3.0-only; see [LICENSE](LICENS
 | pdf-lib | MIT | `vendor/pdf-lib/LICENSE.md` | [Hopding/pdf-lib](https://github.com/Hopding/pdf-lib) |
 | Mediabunny | MPL-2.0 | `vendor/generated/MEDIABUNNY-LICENSE` | [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny) |
 | @mediabunny/mp3-encoder | MPL-2.0 | `vendor/generated/MP3-ENCODER-LICENSE` | [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny) |
+| gifenc | MIT | `vendor/generated/GIFENC-LICENSE` | [mattdesl/gifenc](https://github.com/mattdesl/gifenc) |
+| gifuct-js | MIT | `vendor/generated/GIFUCT-LICENSE` | [matt-way/gifuct-js](https://github.com/matt-way/gifuct-js) |
 | UTIF.js | MIT | `vendor/generated/UTIF-LICENSE` | [photopea/UTIF.js](https://github.com/photopea/UTIF.js) |
 | pako (used by UTIF.js) | MIT and zlib | `vendor/generated/PAKO-LICENSE`, `vendor/generated/PAKO-ZLIB-NOTICE` | [nodeca/pako](https://github.com/nodeca/pako) |
 

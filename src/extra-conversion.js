@@ -62,8 +62,8 @@ export async function pdfToImagesZip(file, type, strength, signal, onProgress = 
     if (pdf.numPages > MAX_PDF_PAGES) throw new Error(t('tooManyPages'));
     const entries = [];
     let totalBytes = 0;
-    const imageType = type === 'image/png' ? 'image/png' : 'image/jpeg';
-    const extension = imageType === 'image/png' ? 'png' : 'jpg';
+    const imageType = ['image/png', 'image/webp', 'image/avif'].includes(type) ? type : 'image/jpeg';
+    const extension = { 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/jpeg': 'jpg' }[imageType];
     for (let number = 1; number <= pdf.numPages; number++) {
       signal.throwIfAborted();
       const page = await pdf.getPage(number);

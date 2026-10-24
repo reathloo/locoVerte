@@ -50,7 +50,7 @@ async function save(name, content) {
 }
 await save('image.png', png);
 await save('image-no-extension', png);
-await save('image.gif', Buffer.from('R0lGODlhAQABAAD/ACwAAAAAAQABAAACAUwAOw==', 'base64'));
+await save('image.gif', Buffer.from('R0lGODlhAgACAPAAAP8AAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAAAgACAAAIBgABCAQQEAAh+QQACgAAACwAAAAAAgACAIAAAP8AAAAIBgABCAQQEAA7', 'base64'));
 await save('image.tiff', Buffer.from(UTIF.encodeImage(new Uint8Array([255, 0, 0, 255]), 1, 1)));
 await save('invalid.jpg', 'This is not an image.');
 await save('broken.pdf', '%PDF-1.7\nBroken PDF for error handling.');

@@ -47,6 +47,7 @@ mediabunny/dist/modules/src/input.js:
 mediabunny/dist/modules/src/reader.js:
 mediabunny/dist/modules/src/id3.js:
 mediabunny/dist/modules/src/muxer.js:
+mediabunny/dist/modules/src/adts/adts-muxer.js:
 mediabunny/dist/modules/src/flac/flac-muxer.js:
 mediabunny/dist/modules/src/subtitles.js:
 mediabunny/dist/modules/src/isobmff/isobmff-boxes.js:
@@ -57,6 +58,7 @@ mediabunny/dist/modules/src/matroska/matroska-muxer.js:
 mediabunny/dist/modules/src/mp3/mp3-writer.js:
 mediabunny/dist/modules/src/mp3/mp3-muxer.js:
 mediabunny/dist/modules/src/ogg/ogg-muxer.js:
+mediabunny/dist/modules/src/mpeg-ts/mpeg-ts-muxer.js:
 mediabunny/dist/modules/src/wave/riff-writer.js:
 mediabunny/dist/modules/src/wave/wave-muxer.js:
 mediabunny/dist/modules/src/resample.js:
