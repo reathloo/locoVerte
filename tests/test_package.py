@@ -62,7 +62,7 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["data_collection_permissions"]["required"], ["none"])
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@reathloo.dev")
                 self.assertEqual(manifest["permissions"], ["activeTab", "scripting"])
-                self.assertEqual(manifest["version"], "0.2.3")
+                self.assertEqual(manifest["version"], "0.2.4")
 
 
 if __name__ == "__main__":

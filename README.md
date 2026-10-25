@@ -15,19 +15,19 @@ Convert and compress images, PDFs, Office documents, audio, and video right in y
 
 Media options are shown only when the browser can encode the required codec. GIF and MP3 encoding are bundled; M4A/AAC and video codecs use local browser support. Converting GIF to another image format uses its first frame; converting it to a video preserves the animation.
 
-## Install the test version
+## Install the stable release
 
-Download `locoverte-0.2.3.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases)** and unzip it.
+Download `locoverte-0.2.4.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases/latest)** and unzip it.
 
 - **Chrome:** Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 - **Edge:** Follow the same steps at `edge://extensions`.
-- **Firefox:** Open `about:debugging` → **This Firefox** → **Load Temporary Add-on**, then select `manifest.json` from the unzipped folder. You must load it again after restarting Firefox. Permanent installation requires a Mozilla-signed XPI, which this test release does not include.
+- **Firefox:** Open `about:debugging` → **This Firefox** → **Load Temporary Add-on**, then select `manifest.json` from the unzipped folder. You must load it again after restarting Firefox. Permanent installation requires a Mozilla-signed XPI.
 
-Click the locoVerte icon in your browser toolbar to open it. GitHub test releases **do not update automatically**; download and install newer versions yourself.
+Click the locoVerte icon in your browser toolbar to open it. Manually installed GitHub releases **do not update automatically**; download and install newer versions yourself.
 
 **Privacy:** Files stay on your device during processing. If you explicitly choose **Use in upload field**, the open website may then upload the result. See [PRIVACY.md](PRIVACY.md).
 
-This is a test release, not a browser-store version. Supported formats and codecs vary by browser; image-based PDFs and simplified Office exports may lose searchable text or layout. Development, testing, and future store steps: [RELEASE.md](RELEASE.md).
+This stable GitHub release is distributed as an unpacked browser extension. It has not been published in browser stores. Supported formats and codecs vary by browser; image-based PDFs and simplified Office exports may lose searchable text or layout. Store preparation and validation details: [RELEASE.md](RELEASE.md).
 
 ## License
 
