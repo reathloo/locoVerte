@@ -1,0 +1,37 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { removeMediaMetadata } from '../src/media-metadata.js';
+
+test('WAV metadata is removed while PCM samples stay byte-identical', async () => {
+  const samples = Uint8Array.from({ length: 8000 }, (_, index) => index % 251);
+  const label = new TextEncoder().encode('Private note\0');
+  const info = new Uint8Array(20 + label.length + (label.length % 2));
+  info.set(new TextEncoder().encode('LIST'), 0);
+  new DataView(info.buffer).setUint32(4, info.length - 8, true);
+  info.set(new TextEncoder().encode('INFOINAM'), 8);
+  new DataView(info.buffer).setUint32(16, label.length, true);
+  info.set(label, 20);
+  const wav = new Uint8Array(44 + samples.length + info.length);
+  const view = new DataView(wav.buffer);
+  wav.set(new TextEncoder().encode('RIFF'), 0);
+  view.setUint32(4, wav.length - 8, true);
+  wav.set(new TextEncoder().encode('WAVEfmt '), 8);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, 8000, true);
+  view.setUint32(28, 8000, true);
+  view.setUint16(32, 1, true);
+  view.setUint16(34, 8, true);
+  wav.set(new TextEncoder().encode('data'), 36);
+  view.setUint32(40, samples.length, true);
+  wav.set(samples, 44);
+  wav.set(info, 44 + samples.length);
+  const result = await removeMediaMetadata(new File([wav], 'private.wav', { type: 'audio/wav' }), new AbortController().signal);
+  const bytes = new Uint8Array(await result.arrayBuffer());
+  assert.equal(result.type, 'audio/wav');
+  assert.equal(new TextDecoder().decode(bytes.subarray(0, 4)), 'RIFF');
+  assert.equal(new TextDecoder().decode(bytes.subarray(8, 12)), 'WAVE');
+  assert.deepEqual(bytes.subarray(44, 44 + samples.length), samples);
+  assert.equal(new TextDecoder().decode(bytes).includes('Private note'), false);
+});

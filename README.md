@@ -15,7 +15,11 @@ Convert and compress images, PDFs, Office documents, audio, and video right in y
 
 Media options are shown only when the browser can encode the required codec. GIF and MP3 encoding are bundled; M4A/AAC and video codecs use local browser support. Converting GIF to another image format uses its first frame; converting it to a video preserves the animation.
 
-The optional **Remove metadata** setting rebuilds outputs locally without embedded author, location, device or editing information. Images and media are re-encoded, animated GIF playback is preserved, and PDFs are rebuilt as image-only pages for reliable removal. This PDF mode removes searchable text, links, forms and signatures.
+The optional **Remove metadata** setting is under **Adjust**. Same-format Office copies remove document properties while keeping DOCX, XLSX or PPTX. DOCX offers separate controls to remove comments or accept tracked changes. Same-format audio and video use packet copying when the container supports it, so streams are not re-encoded; unsupported copies fail. Other image conversions may re-encode, animated GIF playback is preserved, and PDFs are rebuilt as image-only pages for reliable removal. This PDF mode removes searchable text, links, forms and signatures.
+
+Expand **Adjust** to inspect locally detected EXIF/GPS, PNG text, PDF document properties, GIF comments/XMP, Office properties or media tags. Findings appear directly below the metadata checkbox. A missing finding does not prove that a file contains no other embedded private data.
+
+**Redact areas locally** opens an image/PDF editor. Draw rectangles, apply a region across PDF pages, remove header/footer bands, or crop page edges. The export is rebuilt from rendered pixels so original PDF text and objects are absent. PDF search, links, forms and signatures are lost; animated images become a still JPEG. Review the output visually before sharing.
 
 ## Install the stable release
 

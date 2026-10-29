@@ -77,10 +77,12 @@
             <input id="quality" type="range" min="0" max="90" value="40" aria-describedby="quality-direction">
             <div id="quality-direction" class="range-hints"><span data-i18n="gentleHint">Gentle · high quality</span><span data-i18n="strongHint">Strong · lower quality</span></div>
           </div>
-          <label class="metadata-option"><input id="remove-metadata" type="checkbox"><span><strong data-i18n="removeMetadata">Remove metadata</strong><small data-i18n="removeMetadataHelp">Removes embedded author, location, device and editing data.</small></span></label>
-          <p id="metadata-notice" class="warning" data-i18n="removeMetadataPdfWarning" hidden>PDF pages are rebuilt as images to remove metadata reliably. Search, links, forms and signatures are lost.</p>
-          <details id="adjust-options" hidden>
+          <details id="adjust-options">
             <summary><span id="adjust-label" data-i18n="imageAdjust">Adjust image</span><span id="adjust-summary" class="adjust-summary" hidden></span></summary>
+            <label class="metadata-option"><input id="remove-metadata" type="checkbox"><span><strong data-i18n="removeMetadata">Remove metadata</strong><small data-i18n="removeMetadataHelp">Removes embedded author, location, device and editing data.</small></span></label>
+            <p id="privacy-status" class="field-help" role="status"></p><dl id="privacy-list" class="privacy-details"></dl>
+            <p id="metadata-notice" class="warning" data-i18n="removeMetadataPdfWarning" hidden>PDF pages are rebuilt as images to remove metadata reliably. Search, links, forms and signatures are lost.</p>
+            <div id="office-options" class="adjust-field" hidden><label class="metadata-option"><input id="remove-comments" type="checkbox"><span data-i18n="removeComments">Remove comments</span></label><label class="metadata-option"><input id="accept-changes" type="checkbox"><span data-i18n="acceptChanges">Accept tracked changes</span></label><small class="field-help" data-i18n="officeEditWarning">These options change document content. Review the output in an Office application.</small></div>
             <div id="image-controls" class="image-options-grid">
               <div class="control-group"><label for="max-dimension" data-i18n="maxDimension">Longest edge (px)</label><input id="max-dimension" type="number" min="1" max="16000" placeholder="Auto" data-i18n-placeholder="autoSize"></div>
               <div class="control-group"><label for="rotation" data-i18n="rotate">Rotate</label><select id="rotation"><option value="0" data-i18n="noRotation">No rotation</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
@@ -95,6 +97,18 @@
               <input id="target-size" type="text" inputmode="decimal" placeholder="e.g. 2.5" data-i18n-placeholder="targetPlaceholder" aria-describedby="target-help">
               <small id="target-help" class="field-help" data-i18n="targetHelp"></small>
             </div>
+            <button id="redact-open" class="secondary-button redact-open" type="button" data-i18n="redactOpen" hidden>Redact areas locally</button>
+            <section id="redact-editor" class="redact-editor" hidden aria-labelledby="redact-title">
+              <h2 id="redact-title" data-i18n="redactTitle">Redact areas</h2>
+              <p class="field-help" data-i18n="redactWarning">Marked areas are removed from a newly rendered copy. PDF text, links, forms and signatures are lost; animations become a still image.</p>
+              <div class="redact-page-controls"><button id="redact-prev" type="button" aria-label="Previous page">‹</button><span id="redact-page"></span><button id="redact-next" type="button" aria-label="Next page">›</button></div>
+              <div class="redact-canvas-wrap"><canvas id="redact-preview"></canvas><canvas id="redact-overlay" aria-label="Drag to mark an area for redaction"></canvas></div>
+              <label class="metadata-option"><input id="redact-all-pages" type="checkbox"><span data-i18n="redactAllPages">Apply new area to every page</span></label>
+              <div class="redact-tools"><label for="redact-band-size" data-i18n="redactBandSize">Header/footer height (%)</label><input id="redact-band-size" type="number" value="8" min="1" max="40"><button id="redact-header" type="button" data-i18n="redactHeader">Remove header</button><button id="redact-footer" type="button" data-i18n="redactFooter">Remove footer</button></div>
+              <div class="redact-crop"><label data-i18n="redactCrop">Crop edges (%)</label><input id="redact-crop-top" type="number" min="0" max="40" value="0" aria-label="Crop top"><input id="redact-crop-right" type="number" min="0" max="40" value="0" aria-label="Crop right"><input id="redact-crop-bottom" type="number" min="0" max="40" value="0" aria-label="Crop bottom"><input id="redact-crop-left" type="number" min="0" max="40" value="0" aria-label="Crop left"></div>
+              <p id="redact-count" class="field-help"></p><p id="redact-status" class="field-help" role="status"></p>
+              <div class="redact-actions"><button id="redact-undo" type="button" data-i18n="redactUndo">Undo last area</button><button id="redact-cancel" type="button" data-i18n="cancel">Cancel</button><button id="redact-export" class="primary-button" type="button" data-i18n="redactExport">Create redacted copy</button></div>
+            </section>
             <div class="adjust-field">
               <label for="output-name" data-i18n="outputName">File name (optional, without extension)</label>
               <input id="output-name" type="text" maxlength="100" autocomplete="off" data-i18n-placeholder="outputNamePlaceholder" placeholder="Keep suggested name">

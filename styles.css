@@ -104,6 +104,23 @@ select, input[type="text"], input[type="number"] { width: 100%; min-width: 0; pa
 .metadata-option span { display: grid; gap: 3px; }
 .metadata-option strong { font-size: 12px; }
 .metadata-option small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.privacy-details { margin: -5px 0 14px 25px; font-size: 11px; }
+.privacy-details summary { color: var(--accent); cursor: pointer; }
+.privacy-details dl { margin: 8px 0; overflow-wrap: anywhere; }
+.privacy-details dt { font-weight: 650; margin-top: 8px; }
+.privacy-details dd { margin: 2px 0 0; color: var(--muted); }
+.redact-open { width: 100%; margin-top: 12px; }
+.redact-editor { margin-top: 12px; padding: 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.redact-page-controls, .redact-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0; }
+.redact-page-controls button, .redact-actions button, .redact-tools button { min-height: 32px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+.redact-actions .primary-button { width: auto; background: var(--button); color: white; }
+.redact-canvas-wrap { position: relative; width: 100%; line-height: 0; }
+.redact-canvas-wrap canvas { display: block; width: 100%; height: auto; }
+#redact-overlay { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+.redact-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; }
+.redact-tools input { width: 58px; }
+.redact-crop { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 10px; font-size: 11px; }
+.redact-crop input { width: 48px; }
 #background-color { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
 #background-color:disabled { opacity: .4; cursor: default; }
 .upload-field, .batch-zip { width: 100%; margin-top: 9px; }

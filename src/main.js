@@ -12,6 +12,10 @@ import { imageFromPaste, readClipboardImage } from './clipboard-image.js';
 import { editPdfPages, inspectPdfPages, mergePdfs } from './pdf-pages.js';
 import { MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE } from './limits.js';
 import { stripGifMetadata, stripPdfMetadata } from './metadata.js';
+import { inspectPrivacy } from './privacy-inspection.js';
+import { createRedactionEditor } from './redaction.js';
+import { cleanOffice } from './office-cleanup.js';
+import { removeMediaMetadata } from './media-metadata.js';
 
 const $ = (id) => document.getElementById(id);
 const quality = $('quality');
@@ -26,6 +30,8 @@ let estimateTimer;
 let estimateData = null;
 let imageCache = null;
 let selectionVersion = 0;
+let privacyVersion = 0;
+const privacyCache = new WeakMap();
 let downloadTimer;
 let downloadStarted = false;
 let progressMessage = null;
@@ -69,17 +75,18 @@ const formats = {
   'video/webm': videoOutputs,
   'video/x-matroska': videoOutputs,
   'video/mp2t': videoOutputs,
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [['application/pdf', 'PDF'], ['text/plain', 'TXT']],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [['application/pdf', 'PDF'], ['text/csv', 'CSV']],
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': [['application/pdf', 'PDF'], ['text/plain', 'TXT']],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'DOCX'], ['application/pdf', 'PDF'], ['text/plain', 'TXT']],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'XLSX'], ['application/pdf', 'PDF'], ['text/csv', 'CSV']],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': [['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTX'], ['application/pdf', 'PDF'], ['text/plain', 'TXT']],
 };
+const officeExtensions = { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx' };
 const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif', 'application/pdf': 'pdf', 'application/zip': 'zip', 'text/plain': 'txt', 'text/csv': 'csv', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/ogg': 'ogg', 'audio/flac': 'flac', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/x-matroska': 'mkv', 'video/mp2t': 'ts' };
 const mediaCapabilities = new Map();
 let mediaCapabilityCheck;
 
 function availableFormats(type) {
   const options = formats[type];
-  const supported = options.filter(([output]) => mediaCapabilities.get(output) !== false);
+  const supported = options.filter(([output]) => output === type || mediaCapabilities.get(output) !== false);
   return supported.length ? supported : options;
 }
 
@@ -146,7 +153,7 @@ function customFilename(type) {
   const name = outputName.value.trim();
   if (!name) return null;
   if (/[\\/:*?"<>|\x00-\x1f]/.test(name) || /[. ]$/.test(name)) throw new Error(t('invalidOutputName'));
-  const extension = extensions[type];
+  const extension = extensions[type] ?? officeExtensions[type];
   if (!extension) throw new Error(t('invalidOutputName'));
   const base = name.replace(new RegExp(`\\.${extension}$`, 'i'), '');
   if (!base || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) throw new Error(t('invalidOutputName'));
@@ -172,7 +179,7 @@ function stopEstimate() {
 }
 
 function setBusy(busy) {
-  for (const control of [quality, format, target, outputName, $('max-dimension'), $('output-width'), $('output-height'), $('rotation'), $('square-mode'), $('background-fill'), $('remove-metadata'), $('process')]) control.disabled = busy;
+  for (const control of [quality, format, target, outputName, $('max-dimension'), $('output-width'), $('output-height'), $('rotation'), $('square-mode'), $('background-fill'), $('remove-metadata'), $('remove-comments'), $('accept-changes'), $('process')]) control.disabled = busy;
   $('background-color').disabled = busy || !$('background-fill').checked;
   $('cancel').hidden = !busy;
   $('progress').hidden = !busy;
@@ -223,22 +230,24 @@ function renderSettings() {
   $('quality-row').hidden = !hasQuality;
   $('format-row').hidden = false;
   const isImage = file.type.startsWith('image/');
-  $('adjust-options').hidden = !isImage && !isPdf;
+  $('adjust-options').hidden = false;
   $('pdf-pages-tools').hidden = !isPdf;
-  $('adjust-label').textContent = t(isPdf ? 'pdfAdjust' : 'imageAdjust');
+  $('adjust-label').textContent = t(isPdf ? 'pdfAdjust' : isImage ? 'imageAdjust' : 'fileAdjust');
+  $('office-options').hidden = !file.type.includes('wordprocessingml') || outputType !== file.type;
   $('image-controls').hidden = !isImageOutput;
   $('target-row').hidden = unchangedGif || !isImageOutput && (!isPdf || outputType !== 'application/pdf');
   const targetText = target.value.trim();
   const summary = [targetText ? t('targetSizeSummary', { size: targetText }) : '', outputName.value.trim() ? t('renamedSummary') : ''].filter(Boolean).join(' · ');
   $('adjust-summary').hidden = !summary;
   $('adjust-summary').textContent = summary;
-  $('pdf-notice').hidden = unchangedGif || !isPdf && !isOffice && !isAudio && !isVideo && !['image/gif', 'image/tiff', 'image/heic'].includes(file.type);
+  $('pdf-notice').hidden = unchangedGif || !isPdf && !(isOffice && outputType !== file.type) && !isAudio && !isVideo && !['image/gif', 'image/tiff', 'image/heic'].includes(file.type);
   $('pdf-notice').textContent = isOffice ? t(outputType === 'application/pdf' ? 'officePdfNotice' : outputType === 'text/csv' ? 'xlsxNotice' : 'docxNotice')
     : isAudio || isVideo || gifToVideo ? t('mediaNotice')
       : ['image/gif', 'image/tiff'].includes(file.type) ? t('firstFrameNotice')
         : file.type === 'image/heic' ? t('heicNotice')
     : isPdfText ? t('pdfTextNotice') : outputType.includes('locoverte-') ? t('pdfImageNotice') : t(strength <= 30 ? 'pdfStructureNotice' : 'pdfRasterNotice');
   $('metadata-notice').hidden = !$('remove-metadata').checked || !isPdf || outputType !== 'application/pdf';
+  $('redact-open').hidden = !isPdf && !isImage;
   $('file-name').textContent = file.name;
   $('file-name').title = file.name;
   $('file-size').textContent = formatBytes(file.size);
@@ -305,9 +314,10 @@ function renderResult() {
         : t('noSmallerResult', { onePixel: image?.sourceWidth === 1 && image?.sourceHeight === 1 ? t('onePixelResult') : '', target: targetNote });
   if (isPdf && !keepOriginal && result.blob.type === 'application/pdf') $('result-stats').textContent += t('pdfResultWarning');
   if (isPdf && result.blob.type === 'text/plain') $('result-stats').textContent += t('pdfTextResult');
-  if (source.type.includes('officedocument')) $('result-stats').textContent += t('officeResultWarning');
+  if (source.type.includes('officedocument') && !sameFormat) $('result-stats').textContent += t('officeResultWarning');
   if (reducedFurther && !keepOriginal) $('result-stats').textContent += t('targetAdjusted');
   if (result.metadataRemoved) $('result-stats').textContent += t('metadataRemovedResult');
+  if (result.redacted) $('result-stats').textContent += t('redactResult');
   if (result.reason) $('result-stats').textContent += ` ${t(result.reason)}`;
   $('result-size').textContent = formatBytes(blob.size);
   $('download').textContent = t($('download').disabled ? 'downloadStarted' : downloadStarted ? 'downloadAgain' : 'download');
@@ -403,6 +413,8 @@ async function selectFiles(candidates) {
     target.value = '';
     outputName.value = '';
     $('adjust-options').open = false;
+    $('remove-comments').checked = false;
+    $('accept-changes').checked = false;
   }
   mergedPdf = null;
   if (items.length === 1) {
@@ -419,6 +431,10 @@ async function selectFiles(candidates) {
 }
 
 function showItems() {
+  privacyVersion++;
+  $('privacy-list').replaceChildren();
+  $('privacy-status').textContent = '';
+  redactionEditor.reset();
   const batch = items.length > 1;
   $('single-workspace').hidden = batch;
   $('batch-workspace').hidden = !batch;
@@ -427,6 +443,7 @@ function showItems() {
   if (!items.length) { file = null; resetPdfPages(); render(); return; }
   if (batch) { file = null; resetPdfPages(); renderBatch(); return; }
   file = items[0].source;
+  if ($('adjust-options').open) $('adjust-options').dispatchEvent(new Event('toggle'));
   if (pdfPageSource !== file) resetPdfPages();
   setFormats(file.type);
   format.value = items[0].outputType;
@@ -500,6 +517,33 @@ function renderBatch() {
     status.className = `batch-item-status${item.error ? ' batch-error' : ''}`;
     status.textContent = item.error || (item.result ? batchResultText(item.result) : t(item.status));
     row.append(head, details, status);
+    const privacy = document.createElement('details');
+    privacy.className = 'privacy-details';
+    const summary = document.createElement('summary');
+    summary.textContent = t('privacyDetails');
+    const findings = document.createElement('div');
+    findings.textContent = t('privacyLoading');
+    privacy.append(summary, findings);
+    privacy.addEventListener('toggle', async () => {
+      if (!privacy.open) return;
+      try {
+        let data = privacyCache.get(item.source);
+        if (!data) { data = await inspectPrivacy(item.source); privacyCache.set(item.source, data); }
+        if (!privacy.isConnected) return;
+        findings.replaceChildren();
+        const message = document.createElement('p');
+        message.textContent = data.length ? t('privacyFound', { count: data.length }) : t('privacyNone');
+        findings.append(message);
+        const list = document.createElement('dl');
+        for (const entry of data) {
+          const term = document.createElement('dt'), description = document.createElement('dd');
+          term.textContent = entry.label; description.textContent = entry.value;
+          list.append(term, description);
+        }
+        findings.append(list);
+      } catch { findings.textContent = t('privacyUnavailable'); }
+    });
+    row.append(privacy);
     if (item.result) {
       const download = document.createElement('button');
       download.type = 'button';
@@ -513,17 +557,17 @@ function renderBatch() {
   }));
 }
 
-function batchResultText({ blob, source, keepOriginal, isPdf, metadataRemoved }) {
+function batchResultText({ blob, source, sameFormat, keepOriginal, isPdf, metadataRemoved }) {
   const change = Math.round((blob.size / source.size - 1) * 100);
   const difference = change < 0 ? `−${Math.abs(change)} %` : change > 0 ? `+${change} %` : '0 %';
-  const warning = source.type.includes('officedocument') ? t('officeResultWarning')
+  const warning = source.type.includes('officedocument') && !sameFormat ? t('officeResultWarning')
     : isPdf && blob.type === 'text/plain' ? t('pdfTextResult')
       : isPdf && !keepOriginal && blob.type === 'application/pdf' ? t('pdfResultWarning') : '';
   return `${t('batchDone')} · ${formatBytes(source.size)} → ${formatBytes(blob.size)} (${difference})${warning}${metadataRemoved ? t('metadataRemovedResult') : ''}`;
 }
 
 function outputFilename(current) {
-  return current.filename ?? `${current.source.name.replace(/\.[^.]+$/, '')}${t(current.sameFormat ? 'fileSuffix' : 'convertedSuffix')}.${extensions[current.blob.type]}`;
+  return current.filename ?? `${current.source.name.replace(/\.[^.]+$/, '')}${t(current.sameFormat ? 'fileSuffix' : 'convertedSuffix')}.${extensions[current.blob.type] ?? officeExtensions[current.blob.type]}`;
 }
 
 function downloadResult(current) {
@@ -695,6 +739,8 @@ for (const [id, selectedOnly] of [['pdf-pages-save', false], ['pdf-pages-extract
   });
 }
 $('remove-file').addEventListener('click', () => {
+  privacyVersion++;
+  redactionEditor.reset();
   selectionVersion += 1;
   stopOperation();
   stopEstimate();
@@ -832,6 +878,25 @@ $('merge-download').addEventListener('click', () => {
 });
 quality.addEventListener('input', changed);
 $('remove-metadata').addEventListener('change', changed);
+for (const id of ['remove-comments', 'accept-changes']) $(id).addEventListener('change', changed);
+$('adjust-options').addEventListener('toggle', async () => {
+  if (!$('adjust-options').open || !file) return;
+  const source = file, request = ++privacyVersion;
+  $('privacy-status').textContent = t('privacyLoading');
+  $('privacy-list').replaceChildren();
+  try {
+    const findings = await inspectPrivacy(source);
+    if (request !== privacyVersion || source !== file) return;
+    $('privacy-status').textContent = findings.length ? t('privacyFound', { count: findings.length }) : ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'].includes(source.type) || source.type.includes('officedocument') || /^(audio|video)\//.test(source.type) ? t('privacyNone') : t('privacyNotSupported');
+    for (const { label, value } of findings) {
+      const term = document.createElement('dt'), description = document.createElement('dd');
+      term.textContent = label; description.textContent = value;
+      $('privacy-list').append(term, description);
+    }
+  } catch {
+    if (request === privacyVersion) $('privacy-status').textContent = t('privacyUnavailable');
+  }
+});
 format.addEventListener('change', () => {
   const supportsTarget = file?.type.startsWith('image/') && format.value.startsWith('image/')
     && !(file.type === 'image/gif' && format.value === 'image/gif')
@@ -857,7 +922,16 @@ outputName.addEventListener('input', () => {
 });
 $('cancel').addEventListener('click', changed);
 
-async function convert(source, outputType, strength, targetBytes, cached, signal, updateProgress, options = {}, removeMetadata = false) {
+async function convert(source, outputType, strength, targetBytes, cached, signal, updateProgress, options = {}, removeMetadata = false, officeOptions = {}) {
+  if (source.type.includes('officedocument') && outputType === source.type) {
+    const changed = removeMetadata || officeOptions.removeComments || officeOptions.acceptChanges;
+    const blob = changed ? await cleanOffice(source, { removeMetadata, ...officeOptions }, signal) : source;
+    return { blob, source, sameFormat: true, keepOriginal: !changed, metadataRemoved: removeMetadata, isPdf: false };
+  }
+  if (/^(audio|video)\//.test(source.type) && source.type === outputType && removeMetadata) {
+    const blob = await removeMediaMetadata(source, signal, updateProgress);
+    return { blob, source, sameFormat: true, keepOriginal: false, metadataRemoved: true, isPdf: false };
+  }
   const value = 100 - strength;
   const transformed = hasImageAdjustments(options);
   const image = source.type.startsWith('image/') && outputType.startsWith('image/')
@@ -942,7 +1016,7 @@ $('process').addEventListener('click', async () => {
   setBusy(true);
   updateProgress('processingLocal');
   try {
-    result = await convert(source, config.outputType, config.strength, targetBytes, targetBytes ? null : cached, controller.signal, updateProgress, options, $('remove-metadata').checked);
+    result = await convert(source, config.outputType, config.strength, targetBytes, targetBytes ? null : cached, controller.signal, updateProgress, options, $('remove-metadata').checked, { removeComments: $('remove-comments').checked, acceptChanges: $('accept-changes').checked });
     applyOutputName(result);
     const { image, keepOriginal } = result;
     if (image) { imageCache = image; renderSettings(); }
@@ -1036,4 +1110,11 @@ $('upload-field').addEventListener('click', async () => {
 });
 
 initPreferences(render, showError);
+const redactionEditor = createRedactionEditor($('redact-editor'), (source, blob) => {
+  clearResult();
+  result = { source, blob, filename: `${source.name.replace(/\.[^.]+$/, '')}-redacted.${extensions[blob.type]}`, sameFormat: source.type === blob.type, keepOriginal: false, isPdf: source.type === 'application/pdf', redacted: true };
+  if (items.length === 1) items[0].result = result;
+  renderResult();
+}, showError);
+$('redact-open').addEventListener('click', () => { if (file) redactionEditor.open(file); });
 render();
