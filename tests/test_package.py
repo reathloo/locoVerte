@@ -33,6 +33,7 @@ class PackageTests(unittest.TestCase):
                 self.assertIn("assets/icons/icon-128.png", names)
                 self.assertIn("vendor/pdfjs/pdf.worker.mjs", names)
                 self.assertIn("vendor/generated/media-vendor.js", names)
+                self.assertIn("vendor/generated/gif-vendor.js", names)
                 self.assertIn("vendor/generated/tiff-vendor.js", names)
                 self.assertIn("src/media-conversion.js", names)
                 self.assertIn("src/zip.js", names)
@@ -47,6 +48,8 @@ class PackageTests(unittest.TestCase):
                 self.assertIn("src/redaction.js", names)
                 self.assertIn("src/office-cleanup.js", names)
                 self.assertIn("src/media-metadata.js", names)
+                self.assertIn("src/file-validation.js", names)
+                self.assertIn("src/pdfjs-loader.js", names)
                 self.assertFalse(any(name.startswith(("tests/", "assets/icon-concepts/", "dist/")) for name in names))
                 index = archive.read("index.html").decode("utf-8")
                 self.assertIn('.mp4,video/mp4', index)
@@ -67,7 +70,7 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["data_collection_permissions"]["required"], ["none"])
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@reathloo.dev")
                 self.assertEqual(manifest["permissions"], ["activeTab", "scripting"])
-                self.assertEqual(manifest["version"], "0.2.5")
+                self.assertEqual(manifest["version"], "0.2.6")
 
 
 if __name__ == "__main__":

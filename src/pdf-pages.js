@@ -1,4 +1,5 @@
 import { t } from './i18n.js';
+import { loadPdfJs } from './pdfjs-loader.js';
 import { MAX_PDF_PAGES, MAX_PDF_OUTPUT_SIZE, MAX_FILE_SIZE } from './limits.js';
 
 const MAX_PAGES = MAX_PDF_PAGES;
@@ -18,7 +19,7 @@ export function isVisuallyBlank(data, width, height) {
 
 export async function findBlankPdfPages(file, signal, onProgress = () => {}) {
   await loadSafePdf(file, signal);
-  const pdfjs = await import('../vendor/pdfjs/pdf.mjs');
+  const pdfjs = await loadPdfJs();
   const task = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,

@@ -4,7 +4,6 @@ import {
   Mp4OutputFormat, MovOutputFormat, WebMOutputFormat, MkvOutputFormat, MpegTsOutputFormat,
   AdtsOutputFormat, Quality, canEncodeAudio, canEncodeVideo,
   registerMp3Encoder, CanvasSink, CanvasSource,
-  GIFEncoder, quantize, applyPalette, parseGIF, decompressFrames,
 } from '../vendor/generated/media-vendor.js';
 import { t } from './i18n.js';
 import { createSeekableBlob } from './seekable-blob.js';
@@ -77,6 +76,7 @@ async function convertVideoFrame(input, outputType, strength, signal) {
 }
 
 async function convertGifToVideo(file, outputType, strength, signal, onProgress) {
+  const { parseGIF, decompressFrames } = await import('../vendor/generated/gif-vendor.js');
   const parsed = parseGIF(await file.arrayBuffer());
   const width = parsed.lsd.width;
   const height = parsed.lsd.height;
@@ -149,6 +149,7 @@ async function convertGifToVideo(file, outputType, strength, signal, onProgress)
 }
 
 async function convertVideoToGif(input, strength, signal, onProgress) {
+  const { GIFEncoder, quantize, applyPalette } = await import('../vendor/generated/gif-vendor.js');
   if (!(await input.canRead())) throw new Error(t('mediaReadError'));
   const track = await input.getPrimaryVideoTrack();
   if (!track) throw new Error(t('mediaReadError'));

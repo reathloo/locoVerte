@@ -1,5 +1,5 @@
-import * as pdfjs from '../vendor/pdfjs/pdf.mjs';
 import { t } from './i18n.js';
+import { loadPdfJs } from './pdfjs-loader.js';
 import { zipBlobs, MAX_ZIP_BYTES } from './zip.js';
 import { imageBitmap } from './conversion.js';
 import { MAX_PDF_PAGES, MAX_PDF_OUTPUT_SIZE } from './limits.js';
@@ -46,6 +46,7 @@ export const imageToPdf = (file, strength, signal) => imagesToPdf([file], streng
 
 export async function pdfToImagesZip(file, type, strength, signal, onProgress = () => {}) {
   signal.throwIfAborted();
+  const pdfjs = await loadPdfJs();
   const task = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,
@@ -102,6 +103,7 @@ export async function pdfToImagesZip(file, type, strength, signal, onProgress = 
 
 export async function pdfToText(file, signal, onProgress = () => {}) {
   signal.throwIfAborted();
+  const pdfjs = await loadPdfJs();
   const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false });
   const abort = () => { task.destroy().catch(() => {}); };
   signal.addEventListener('abort', abort, { once: true });

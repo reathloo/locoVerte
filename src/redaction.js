@@ -1,11 +1,11 @@
-import * as pdfjs from '../vendor/pdfjs/pdf.mjs';
 import { imageBitmap } from './conversion.js';
 import { MAX_PDF_OUTPUT_SIZE, MAX_PDF_PAGES } from './limits.js';
 import { t } from './i18n.js';
+import { loadPdfJs } from './pdfjs-loader.js';
 
 // Rectangles use fractions of the original page; display scaling never changes export coordinates.
 export function createRedactionEditor(root, onResult, onError) {
-  const $ = (id) => root.querySelector(`#${id}`);
+  const $ = (id) => root.querySelector(`[data-redact-field="${id}"]`) ?? root.querySelector(`#${id}`);
   const preview = $('redact-preview'), overlay = $('redact-overlay');
   const context = overlay.getContext('2d');
   let file, document, pages = [], regions = [], current = 0, drag = null, generation = 0;
@@ -55,6 +55,7 @@ export function createRedactionEditor(root, onResult, onError) {
     generation++;
     document?.destroy(); document = null; file = null; pages = []; regions = []; current = 0;
     drag = null;
+    preview.width = preview.height = overlay.width = overlay.height = 0;
     for (const side of ['top', 'right', 'bottom', 'left']) $(`redact-crop-${side}`).value = '0';
     $('redact-all-pages').checked = false;
     root.hidden = true;
@@ -64,6 +65,7 @@ export function createRedactionEditor(root, onResult, onError) {
     $('redact-status').textContent = t('redactLoading');
     try {
       if (source.type === 'application/pdf') {
+        const pdfjs = await loadPdfJs();
         const task = pdfjs.getDocument({ data: new Uint8Array(await source.arrayBuffer()), isEvalSupported: false,
           cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href, cMapPacked: true,
           standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href,

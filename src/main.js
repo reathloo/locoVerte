@@ -1,21 +1,60 @@
 import { locale, t } from './i18n.js';
 import { initPreferences } from './preferences.js';
-import { compressImage, compressImageToTarget, compressPdf, estimatePdf, pdfPreview, validateFile, MAX_ESTIMATE_SIZE } from './conversion.js';
-import { imageToPdf, imagesToPdf, pdfToImagesZip, pdfToText } from './extra-conversion.js';
+import { validateFile } from './file-validation.js';
 import { docxToText, xlsxToCsv } from './office-conversion.js';
-import { officeToPdf, pptxToText } from './office-conversion.js';
-import { convertMedia, mediaSupport } from './media-conversion.js';
+import { officeToPdf as officeToPdfImpl, pptxToText } from './office-conversion.js';
 import { zipBlobs } from './zip.js';
 import { fillUploadField } from './upload-field.js';
 import { installFileDrop } from './file-drop.js';
 import { imageFromPaste, readClipboardImage } from './clipboard-image.js';
-import { editPdfPages, findBlankPdfPages, inspectPdfPages, mergePdfs } from './pdf-pages.js';
+import { editPdfPages as editPdfPagesImpl, findBlankPdfPages as findBlankPdfPagesImpl, inspectPdfPages as inspectPdfPagesImpl, mergePdfs as mergePdfsImpl } from './pdf-pages.js';
 import { MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE } from './limits.js';
-import { stripGifMetadata, stripPdfMetadata } from './metadata.js';
-import { inspectPrivacy } from './privacy-inspection.js';
-import { createRedactionEditor } from './redaction.js';
+import { stripGifMetadata, stripPdfMetadata as stripPdfMetadataImpl } from './metadata.js';
 import { cleanOffice } from './office-cleanup.js';
-import { removeMediaMetadata } from './media-metadata.js';
+
+let pdfLibPromise;
+function ensurePdfLib() {
+  if (globalThis.PDFLib) return Promise.resolve();
+  pdfLibPromise ??= new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = new URL('../vendor/pdf-lib/pdf-lib.min.js', import.meta.url).href;
+    script.onload = () => globalThis.PDFLib ? resolve() : reject(new Error(t('pdfReadError')));
+    script.onerror = () => reject(new Error(t('pdfReadError')));
+    document.head.append(script);
+  }).catch((error) => { pdfLibPromise = null; throw error; });
+  return pdfLibPromise;
+}
+const withPdfLib = (operation) => async (...args) => { await ensurePdfLib(); return operation(...args); };
+const conversionModule = () => import('./conversion.js');
+const extraModule = () => import('./extra-conversion.js');
+const mediaModule = () => import('./media-conversion.js');
+const privacyModule = () => import('./privacy-inspection.js');
+const metadataModule = () => import('./media-metadata.js');
+const lazy = (load, name) => (...args) => load().then((module) => module[name](...args));
+const compressImage = lazy(conversionModule, 'compressImage');
+const compressImageToTarget = lazy(conversionModule, 'compressImageToTarget');
+const compressPdf = withPdfLib(lazy(conversionModule, 'compressPdf'));
+const estimatePdf = withPdfLib(lazy(conversionModule, 'estimatePdf'));
+const pdfPreview = lazy(conversionModule, 'pdfPreview');
+const imageToPdf = withPdfLib(lazy(extraModule, 'imageToPdf'));
+const imagesToPdf = withPdfLib(lazy(extraModule, 'imagesToPdf'));
+const pdfToImagesZip = lazy(extraModule, 'pdfToImagesZip');
+const pdfToText = lazy(extraModule, 'pdfToText');
+const convertMedia = lazy(mediaModule, 'convertMedia');
+const mediaSupport = lazy(mediaModule, 'mediaSupport');
+const inspectPrivacyImpl = lazy(privacyModule, 'inspectPrivacy');
+const inspectPrivacy = async (source) => {
+  if (source.type === 'application/pdf') await ensurePdfLib();
+  return inspectPrivacyImpl(source);
+};
+const removeMediaMetadata = lazy(metadataModule, 'removeMediaMetadata');
+const officeToPdf = withPdfLib(officeToPdfImpl);
+const editPdfPages = withPdfLib(editPdfPagesImpl);
+const findBlankPdfPages = withPdfLib(findBlankPdfPagesImpl);
+const inspectPdfPages = withPdfLib(inspectPdfPagesImpl);
+const mergePdfs = withPdfLib(mergePdfsImpl);
+const stripPdfMetadata = withPdfLib(stripPdfMetadataImpl);
+const MAX_ESTIMATE_SIZE = 30 * 1024 ** 2;
 
 const $ = (id) => document.getElementById(id);
 const quality = $('quality');
@@ -32,6 +71,21 @@ let imageCache = null;
 let selectionVersion = 0;
 let privacyVersion = 0;
 const privacyCache = new WeakMap();
+function privacyFindings(source) {
+  let pending = privacyCache.get(source);
+  if (!pending) {
+    pending = inspectPrivacy(source).catch((error) => { privacyCache.delete(source); throw error; });
+    privacyCache.set(source, pending);
+  }
+  return pending;
+}
+
+function privacyMessage(source, findings) {
+  if (findings.length) return t('privacyFound', { count: findings.length });
+  return ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'].includes(source.type)
+    || source.type.includes('officedocument') || /^(audio|video)\//.test(source.type)
+    ? t('privacyNone') : t('privacyNotSupported');
+}
 let downloadTimer;
 let downloadStarted = false;
 let progressMessage = null;
@@ -41,10 +95,24 @@ let pdfPageDraft = null;
 let pdfBlankIndexes = new Set();
 let pdfPageLoad = 0;
 let pdfPageDownloadBlocked = false;
+let redactionEditor;
+let batchRedactionEditor;
+let batchRedactionItem;
 let uploadTabId = Number(new URL(location.href).searchParams.get('sourceTab')) || null;
 const items = [];
 let nextItemId = 0;
 const MAX_BATCH_FILES = 20;
+const batchAdjustFields = ['remove-metadata', 'remove-comments', 'accept-changes', 'max-dimension', 'rotation', 'output-width', 'output-height', 'square-mode', 'background-fill', 'background-color', 'target-size', 'output-name'];
+const batchCheckboxes = new Set(['remove-metadata', 'remove-comments', 'accept-changes', 'background-fill']);
+function newBatchAdjust() {
+  return Object.fromEntries(batchAdjustFields.map((id) => [id, batchCheckboxes.has(id) ? false : id === 'rotation' ? '0' : id === 'square-mode' ? 'none' : id === 'background-color' ? '#ffffff' : '']));
+}
+function singleAdjustValues() {
+  return Object.fromEntries(batchAdjustFields.map((id) => [id, batchCheckboxes.has(id) ? $(id).checked : $(id).value]));
+}
+function batchControl(item, id) {
+  return { value: item.adjust[id], checked: !!item.adjust[id] };
+}
 const previewUrls = [];
 const imageOutputs = [['image/jpeg', 'JPEG'], ['image/png', 'PNG'], ['image/webp', 'WebP'], ['image/gif', 'GIF'], ['application/pdf', 'PDF']];
 const avifCanvas = document.createElement('canvas');
@@ -116,12 +184,12 @@ function settings() {
   return { strength, value: 100 - strength, isPdf, outputType: format.value };
 }
 
-function imageOptions() {
-  const raw = $('max-dimension').value.trim();
+function imageOptions(get = $) {
+  const raw = get('max-dimension').value.trim();
   const maxDimension = raw ? Number(raw) : null;
   if (raw && (!Number.isInteger(maxDimension) || maxDimension < 1 || maxDimension > MAX_IMAGE_SIDE)) throw new Error(t('invalidDimension'));
   const dimension = (id) => {
-    const text = $(id).value.trim();
+    const text = get(id).value.trim();
     const value = text ? Number(text) : null;
     if (text && (!Number.isInteger(value) || value < 1 || value > MAX_IMAGE_SIDE)) throw new Error(t('invalidOutputDimensions'));
     return value;
@@ -130,28 +198,28 @@ function imageOptions() {
   const height = dimension('output-height');
   if (width && height && width * height > MAX_IMAGE_PIXELS) throw new Error(t('invalidOutputDimensions'));
   if (maxDimension && (width || height)) throw new Error(t('conflictingDimensions'));
-  const squareMode = $('square-mode').value;
+  const squareMode = get('square-mode').value;
   if (squareMode !== 'none' && width && height && width !== height) throw new Error(t('invalidSquareDimensions'));
-  return { maxDimension, width, height, rotation: Number($('rotation').value), squareCrop: squareMode === 'crop', squarePad: squareMode === 'pad', backgroundColor: $('background-fill').checked ? $('background-color').value : null };
+  return { maxDimension, width, height, rotation: Number(get('rotation').value), squareCrop: squareMode === 'crop', squarePad: squareMode === 'pad', backgroundColor: get('background-fill').checked ? get('background-color').value : null };
 }
 
 function hasImageAdjustments(options) {
   return !!(options.maxDimension || options.width || options.height || options.rotation || options.squareCrop || options.squarePad || options.backgroundColor);
 }
 
-function targetBytesFor(source, outputType) {
+function targetBytesFor(source, outputType, targetValue = target.value) {
   const enabled = source.type.startsWith('image/') && outputType.startsWith('image/')
     && !(source.type === 'image/gif' && outputType === 'image/gif')
     || source.type === 'application/pdf' && outputType === 'application/pdf';
-  const raw = enabled ? target.value.trim() : '';
+  const raw = enabled ? targetValue.trim() : '';
   if (!raw) return null;
   const bytes = Number(raw.replace(',', '.')) * 1024 ** 2;
   if (!Number.isFinite(bytes) || bytes <= 0) throw new Error(t('invalidTarget'));
   return bytes;
 }
 
-function customFilename(type) {
-  const name = outputName.value.trim();
+function customFilename(type, requestedName = outputName.value) {
+  const name = requestedName.trim();
   if (!name) return null;
   if (/[\\/:*?"<>|\x00-\x1f]/.test(name) || /[. ]$/.test(name)) throw new Error(t('invalidOutputName'));
   const extension = extensions[type] ?? officeExtensions[type];
@@ -161,8 +229,8 @@ function customFilename(type) {
   return `${base}.${extension}`;
 }
 
-function applyOutputName(current) {
-  const filename = customFilename(current.blob.type);
+function applyOutputName(current, requestedName = outputName.value) {
+  const filename = customFilename(current.blob.type, requestedName);
   if (filename) current.filename = filename;
   else delete current.filename;
 }
@@ -387,7 +455,7 @@ async function selectFiles(candidates) {
   for (const candidate of candidates) {
     try {
       const source = await validateFile(candidate);
-      accepted.push({ id: ++nextItemId, source, result: null, error: '', status: 'batchReady', downloaded: false });
+      accepted.push({ id: ++nextItemId, source, result: null, error: '', status: 'batchReady', downloaded: false, adjust: newBatchAdjust() });
     } catch (error) { errors.push(`${candidate.name}: ${error.message}`); }
   }
   if (version !== selectionVersion) return;
@@ -421,6 +489,7 @@ async function selectFiles(candidates) {
   if (items.length === 1) {
     items[0].outputType = format.value;
     if (result) items[0].result = result;
+    items[0].adjust = singleAdjustValues();
   }
   items.push(...accepted);
   stopEstimate();
@@ -435,8 +504,13 @@ function showItems() {
   privacyVersion++;
   $('privacy-list').replaceChildren();
   $('privacy-status').textContent = '';
-  redactionEditor.reset();
+  redactionEditor?.reset();
   const batch = items.length > 1;
+  if (!batch) { batchRedactionEditor?.reset(); batchRedactionItem = null; }
+  const wasBatch = !$('batch-workspace').hidden;
+  if (wasBatch && !batch && items.length) {
+    $('adjust-options').open = !!$('batch-list').querySelector(`[data-id="${items[0].id}"] .batch-adjust-options`)?.open;
+  }
   $('single-workspace').hidden = batch;
   $('batch-workspace').hidden = !batch;
   $('workspace').hidden = !items.length;
@@ -444,15 +518,112 @@ function showItems() {
   if (!items.length) { file = null; resetPdfPages(); render(); return; }
   if (batch) { file = null; resetPdfPages(); renderBatch(); return; }
   file = items[0].source;
+  if (wasBatch) for (const id of batchAdjustFields) {
+    const control = $(id);
+    if (batchCheckboxes.has(id)) control.checked = items[0].adjust[id];
+    else control.value = items[0].adjust[id];
+  }
+  $('background-color').disabled = !$('background-fill').checked || !!operation;
   if ($('adjust-options').open) $('adjust-options').dispatchEvent(new Event('toggle'));
   if (pdfPageSource !== file) resetPdfPages();
   setFormats(file.type);
   format.value = items[0].outputType;
   quality.value = $('batch-quality').value;
-  target.value = '';
-  outputName.value = items[0].result?.filename?.replace(/\.[^.]+$/, '') ?? '';
+  target.value = items[0].adjust['target-size'];
+  outputName.value = items[0].adjust['output-name'];
   if (items[0].result) { result = items[0].result; render(); }
   else scheduleEstimate();
+}
+
+function makeBatchAdjust(item, busy, open) {
+  const adjust = $('adjust-options').cloneNode(true);
+  adjust.removeAttribute('id');
+  adjust.classList.add('batch-adjust-options');
+  adjust.hidden = false;
+  adjust.querySelector('#redact-editor').remove();
+  for (const element of adjust.querySelectorAll('[id]')) {
+    element.dataset.batchField = element.id;
+    element.id += `-batch-${item.id}`;
+  }
+  for (const label of adjust.querySelectorAll('label[for]')) label.htmlFor += `-batch-${item.id}`;
+  for (const element of adjust.querySelectorAll('[aria-describedby]')) element.setAttribute('aria-describedby', `${element.getAttribute('aria-describedby')}-batch-${item.id}`);
+  const field = (id) => adjust.querySelector(`[data-batch-field="${id}"]`);
+  const isImage = item.source.type.startsWith('image/');
+  const isPdf = item.source.type === 'application/pdf';
+  const isImageOutput = isImage && item.outputType.startsWith('image/');
+  field('adjust-label').textContent = t(isPdf ? 'pdfAdjust' : isImage ? 'imageAdjust' : 'fileAdjust');
+  for (const id of batchAdjustFields) {
+    const control = field(id);
+    if (batchCheckboxes.has(id)) control.checked = item.adjust[id];
+    else control.value = item.adjust[id];
+    control.disabled = busy;
+  }
+  field('background-color').disabled = busy || !item.adjust['background-fill'];
+  field('office-options').hidden = !item.source.type.includes('wordprocessingml') || item.outputType !== item.source.type;
+  field('image-controls').hidden = !isImageOutput;
+  field('target-row').hidden = item.source.type === 'image/gif' && item.outputType === 'image/gif'
+    || !isImageOutput && (!isPdf || item.outputType !== 'application/pdf');
+  field('metadata-notice').hidden = !item.adjust['remove-metadata'] || !isPdf || item.outputType !== 'application/pdf';
+  field('redact-open').hidden = !isImage && !isPdf;
+  field('redact-open').disabled = busy;
+  field('redact-open').dataset.action = 'redact';
+  const summary = [item.adjust['target-size'].trim() ? t('targetSizeSummary', { size: item.adjust['target-size'].trim() }) : '', item.adjust['output-name'].trim() ? t('renamedSummary') : ''].filter(Boolean).join(' · ');
+  field('adjust-summary').hidden = !summary;
+  field('adjust-summary').textContent = summary;
+  field('privacy-status').textContent = '';
+  field('privacy-list').replaceChildren();
+  adjust.open = open;
+  adjust.addEventListener('toggle', async () => {
+    if (!adjust.open) return;
+    const status = field('privacy-status'), list = field('privacy-list');
+    status.textContent = t('privacyLoading');
+    try {
+      const data = await privacyFindings(item.source);
+      if (!adjust.isConnected || !adjust.open) return;
+      status.textContent = privacyMessage(item.source, data);
+      list.replaceChildren();
+      for (const entry of data) {
+        const term = document.createElement('dt'), description = document.createElement('dd');
+        term.textContent = entry.label; description.textContent = entry.value;
+        list.append(term, description);
+      }
+    } catch { if (adjust.isConnected && adjust.open) status.textContent = t('privacyUnavailable'); }
+  });
+  return adjust;
+}
+
+async function openBatchRedaction(item) {
+  if (!batchRedactionEditor) {
+    const root = $('redact-editor').cloneNode(true);
+    root.id = 'batch-redact-editor';
+    root.setAttribute('aria-labelledby', 'redact-title-batch');
+    for (const element of root.querySelectorAll('[id]')) {
+      element.dataset.redactField = element.id;
+      element.id += '-batch';
+    }
+    for (const label of root.querySelectorAll('label[for]')) label.htmlFor += '-batch';
+    $('batch-redact-host').append(root);
+    const { createRedactionEditor } = await import('./redaction.js');
+    batchRedactionEditor = createRedactionEditor(root, (source, blob) => {
+      const current = batchRedactionItem;
+      if (!current || !items.includes(current) || current.source !== source) return;
+      const filename = `${source.name.replace(/\.[^.]+$/, '')}-redacted.${extensions[blob.type]}`;
+      current.result = { source, blob, filename, sameFormat: source.type === blob.type, keepOriginal: false, isPdf: source.type === 'application/pdf', redacted: true, metadataRemoved: true };
+      current.source = new File([blob], filename, { type: blob.type });
+      current.outputType = blob.type;
+      current.error = '';
+      current.status = 'batchDone';
+      current.downloaded = false;
+      current.downloadBlocked = false;
+      mergedPdf = null;
+      renderBatch();
+    }, (error) => showError(error.message));
+  }
+  if (!items.includes(item) || items.length < 2) return;
+  batchRedactionItem = item;
+  if (item.source.type === 'application/pdf') await ensurePdfLib();
+  await batchRedactionEditor.open(item.source);
+  $('batch-redact-editor').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function renderBatch() {
@@ -461,11 +632,10 @@ function renderBatch() {
   const strength = Number($('batch-quality').value);
   $('batch-count').textContent = t('batchCount', { count: items.length });
   $('batch-quality').disabled = busy;
-  $('batch-remove-metadata').disabled = busy;
   $('batch-quality-output').textContent = t(strength <= 30 ? 'gentle' : strength <= 65 ? 'balanced' : 'strong');
   $('batch-quality').setAttribute('aria-valuetext', $('batch-quality-output').textContent);
   $('batch-workspace').dataset.quality = strength > 65 ? 'low' : strength > 30 ? 'medium' : 'good';
-  const metadataPdf = $('batch-remove-metadata').checked && items.some((item) => item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
+  const metadataPdf = items.some((item) => item.adjust['remove-metadata'] && item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
   const pdfRaster = (strength > 30 || metadataPdf) && items.some((item) => item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
   $('batch-pdf-notice').hidden = !pdfRaster && strength <= 65;
   $('batch-pdf-notice').textContent = t(metadataPdf ? 'removeMetadataPdfWarning' : pdfRaster ? 'batchPdfNotice' : 'qualityMuchLower');
@@ -484,6 +654,9 @@ function renderBatch() {
   $('merge-download').textContent = t(mergedPdf?.downloadBlocked ? 'batchDownloadStarted' : mergedPdf?.downloaded ? 'downloadAgain' : 'batchDownload');
   $('merge-size').textContent = mergedPdf ? formatBytes(mergedPdf.blob.size) : '';
   const list = $('batch-list');
+  const openAdjustIds = new Set([...list.querySelectorAll('.batch-item')]
+    .filter((row) => row.querySelector('details.batch-adjust-options')?.open)
+    .map((row) => row.dataset.id));
   list.replaceChildren(...items.map((item) => {
     const row = document.createElement('div');
     row.className = 'batch-item';
@@ -518,33 +691,7 @@ function renderBatch() {
     status.className = `batch-item-status${item.error ? ' batch-error' : ''}`;
     status.textContent = item.error || (item.result ? batchResultText(item.result) : t(item.status));
     row.append(head, details, status);
-    const privacy = document.createElement('details');
-    privacy.className = 'privacy-details';
-    const summary = document.createElement('summary');
-    summary.textContent = t('privacyDetails');
-    const findings = document.createElement('div');
-    findings.textContent = t('privacyLoading');
-    privacy.append(summary, findings);
-    privacy.addEventListener('toggle', async () => {
-      if (!privacy.open) return;
-      try {
-        let data = privacyCache.get(item.source);
-        if (!data) { data = await inspectPrivacy(item.source); privacyCache.set(item.source, data); }
-        if (!privacy.isConnected) return;
-        findings.replaceChildren();
-        const message = document.createElement('p');
-        message.textContent = data.length ? t('privacyFound', { count: data.length }) : t('privacyNone');
-        findings.append(message);
-        const list = document.createElement('dl');
-        for (const entry of data) {
-          const term = document.createElement('dt'), description = document.createElement('dd');
-          term.textContent = entry.label; description.textContent = entry.value;
-          list.append(term, description);
-        }
-        findings.append(list);
-      } catch { findings.textContent = t('privacyUnavailable'); }
-    });
-    row.append(privacy);
+    row.append(makeBatchAdjust(item, busy, openAdjustIds.has(String(item.id))));
     if (item.result) {
       const download = document.createElement('button');
       download.type = 'button';
@@ -784,12 +931,14 @@ for (const [id, selectedOnly] of [['pdf-pages-save', false], ['pdf-pages-extract
 }
 $('remove-file').addEventListener('click', () => {
   privacyVersion++;
-  redactionEditor.reset();
+  redactionEditor?.reset();
   selectionVersion += 1;
   stopOperation();
   stopEstimate();
   clearResult();
   items.length = 0;
+  batchRedactionEditor?.reset();
+  batchRedactionItem = null;
   mergedPdf = null;
   file = null;
   resetPdfPages();
@@ -802,23 +951,53 @@ $('remove-file').addEventListener('click', () => {
   $('dropzone').focus();
 });
 $('batch-list').addEventListener('change', (event) => {
-  if (event.target.dataset.action !== 'format') return;
-  const item = items.find((entry) => entry.id === Number(event.target.closest('.batch-item').dataset.id));
+  const row = event.target.closest('.batch-item');
+  if (!row) return;
+  const item = items.find((entry) => entry.id === Number(row.dataset.id));
   if (!item || operation) return;
-  item.outputType = event.target.value;
-  item.result = null;
-  item.error = '';
-  item.status = 'batchReady';
-  item.downloaded = false;
-  item.downloadBlocked = false;
+  const field = event.target.dataset.batchField;
+  if (event.target.dataset.action === 'format') {
+    item.outputType = event.target.value;
+    const supportsTarget = item.source.type.startsWith('image/') && item.outputType.startsWith('image/')
+      && !(item.source.type === 'image/gif' && item.outputType === 'image/gif')
+      || item.source.type === 'application/pdf' && item.outputType === 'application/pdf';
+    if (!supportsTarget) item.adjust['target-size'] = '';
+  }
+  else if (field) item.adjust[field] = batchCheckboxes.has(field) ? event.target.checked : event.target.value;
+  else return;
+  if (field === 'max-dimension' && item.adjust[field]) {
+    item.adjust['output-width'] = '';
+    item.adjust['output-height'] = '';
+  } else if (['output-width', 'output-height'].includes(field) && item.adjust[field]) item.adjust['max-dimension'] = '';
+  if (field === 'output-name') {
+    try { if (item.result) applyOutputName(item.result, item.adjust[field]); }
+    catch (error) { return showError(error.message); }
+  } else {
+    item.result = null;
+    item.error = '';
+    item.status = 'batchReady';
+    item.downloaded = false;
+    item.downloadBlocked = false;
+    mergedPdf = null;
+  }
   renderBatch();
+  const selector = field ? `[data-batch-field="${field}"]` : '[data-action="format"]';
+  $('batch-list').querySelector(`[data-id="${item.id}"] ${selector}`)?.focus({ preventScroll: true });
+});
+$('batch-list').addEventListener('input', (event) => {
+  const field = event.target.dataset.batchField;
+  if (!field || operation) return;
+  const item = items.find((entry) => entry.id === Number(event.target.closest('.batch-item').dataset.id));
+  if (item) item.adjust[field] = batchCheckboxes.has(field) ? event.target.checked : event.target.value;
 });
 $('batch-list').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   const item = items.find((entry) => entry.id === Number(button.closest('.batch-item').dataset.id));
   if (!item || operation) return;
-  if (button.dataset.action === 'download') {
+  if (button.dataset.action === 'redact') {
+    openBatchRedaction(item).catch((error) => showError(error.message));
+  } else if (button.dataset.action === 'download') {
     if (!item.result || item.downloadBlocked) return;
     downloadResult(item.result);
     item.downloaded = true;
@@ -832,6 +1011,7 @@ $('batch-list').addEventListener('click', (event) => {
       renderBatch();
     }, 2000);
   } else if (button.dataset.action === 'remove') {
+    if (batchRedactionItem === item) { batchRedactionEditor?.reset(); batchRedactionItem = null; }
     items.splice(items.indexOf(item), 1);
     mergedPdf = null;
     clearResult();
@@ -842,11 +1022,6 @@ $('batch-list').addEventListener('click', (event) => {
   }
 });
 $('batch-quality').addEventListener('input', () => {
-  mergedPdf = null;
-  for (const item of items) { item.result = null; item.error = ''; item.status = 'batchReady'; item.downloaded = false; item.downloadBlocked = false; }
-  renderBatch();
-});
-$('batch-remove-metadata').addEventListener('change', () => {
   mergedPdf = null;
   for (const item of items) { item.result = null; item.error = ''; item.status = 'batchReady'; item.downloaded = false; item.downloadBlocked = false; }
   renderBatch();
@@ -893,7 +1068,7 @@ $('merge-pdf').addEventListener('click', async () => {
       : await mergePdfs(sources, controller.signal, (current, total) => {
         $('batch-progress').textContent = t('batchProgress', { current, total, name: sources[current - 1].name });
       });
-    if ($('batch-remove-metadata').checked) {
+    if (items.some((item) => item.adjust['remove-metadata'])) {
       if (pdfsOnly) blob = (await compressPdf(blob, 69, null, controller.signal, () => {})).blob;
       blob = await stripPdfMetadata(blob, controller.signal);
     }
@@ -929,9 +1104,9 @@ $('adjust-options').addEventListener('toggle', async () => {
   $('privacy-status').textContent = t('privacyLoading');
   $('privacy-list').replaceChildren();
   try {
-    const findings = await inspectPrivacy(source);
+    const findings = await privacyFindings(source);
     if (request !== privacyVersion || source !== file) return;
-    $('privacy-status').textContent = findings.length ? t('privacyFound', { count: findings.length }) : ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'].includes(source.type) || source.type.includes('officedocument') || /^(audio|video)\//.test(source.type) ? t('privacyNone') : t('privacyNotSupported');
+    $('privacy-status').textContent = privacyMessage(source, findings);
     for (const { label, value } of findings) {
       const term = document.createElement('dt'), description = document.createElement('dd');
       term.textContent = label; description.textContent = value;
@@ -1019,9 +1194,14 @@ $('batch-process').addEventListener('click', async () => {
     $('batch-progress').textContent = t('batchProgress', { current: index + 1, total: pending.length, name: item.source.name });
     renderBatch();
     try {
-      item.result = await convert(item.source, item.outputType, Number($('batch-quality').value), null, null, controller.signal, (key, values) => {
+      const targetBytes = targetBytesFor(item.source, item.outputType, item.adjust['target-size']);
+      const options = item.source.type.startsWith('image/') && item.outputType.startsWith('image/')
+        ? imageOptions((id) => batchControl(item, id)) : {};
+      if (item.adjust['output-name'].trim()) customFilename(item.outputType.includes('locoverte-') ? 'application/zip' : item.outputType, item.adjust['output-name']);
+      item.result = await convert(item.source, item.outputType, Number($('batch-quality').value), targetBytes, null, controller.signal, (key, values) => {
         $('batch-progress').textContent = `${t('batchProgress', { current: index + 1, total: pending.length, name: item.source.name })} · ${t(key, values)}`;
-      }, {}, $('batch-remove-metadata').checked);
+      }, options, item.adjust['remove-metadata'], { removeComments: item.adjust['remove-comments'], acceptChanges: item.adjust['accept-changes'] });
+      applyOutputName(item.result, item.adjust['output-name']);
       item.status = 'batchDone';
     } catch (error) {
       if (controller.signal.aborted) { item.status = 'batchReady'; break; }
@@ -1154,11 +1334,23 @@ $('upload-field').addEventListener('click', async () => {
 });
 
 initPreferences(render, showError);
-const redactionEditor = createRedactionEditor($('redact-editor'), (source, blob) => {
-  clearResult();
-  result = { source, blob, filename: `${source.name.replace(/\.[^.]+$/, '')}-redacted.${extensions[blob.type]}`, sameFormat: source.type === blob.type, keepOriginal: false, isPdf: source.type === 'application/pdf', redacted: true };
-  if (items.length === 1) items[0].result = result;
-  renderResult();
-}, showError);
-$('redact-open').addEventListener('click', () => { if (file) redactionEditor.open(file); });
+$('redact-open').addEventListener('click', async () => {
+  if (!file) return;
+  const source = file;
+  try {
+    if (!redactionEditor) {
+      const { createRedactionEditor } = await import('./redaction.js');
+      redactionEditor = createRedactionEditor($('redact-editor'), (original, blob) => {
+        clearResult();
+        result = { source: original, blob, filename: `${original.name.replace(/\.[^.]+$/, '')}-redacted.${extensions[blob.type]}`, sameFormat: original.type === blob.type, keepOriginal: false, isPdf: original.type === 'application/pdf', redacted: true };
+        if (items.length === 1) items[0].result = result;
+        renderResult();
+      }, showError);
+    }
+    if (file === source) {
+      if (source.type === 'application/pdf') await ensurePdfLib();
+      redactionEditor.open(source);
+    }
+  } catch (error) { showError(error.message); }
+});
 render();

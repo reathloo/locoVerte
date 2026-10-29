@@ -13,4 +13,4 @@ The original locoVerte code is licensed under GPL-3.0-only; see [LICENSE](LICENS
 | UTIF.js | MIT | `vendor/generated/UTIF-LICENSE` | [photopea/UTIF.js](https://github.com/photopea/UTIF.js) |
 | pako (used by UTIF.js) | MIT and zlib | `vendor/generated/PAKO-LICENSE`, `vendor/generated/PAKO-ZLIB-NOTICE` | [nodeca/pako](https://github.com/nodeca/pako) |
 
-The generated media bundle also contains `vendor/generated/media-vendor.js.LEGAL.txt` with build-time notices. The build script copies the applicable license texts from installed packages into `vendor/generated/`.
+The generated media bundle includes `vendor/generated/media-vendor.js.LEGAL.txt` with build-time notices. The build script copies the applicable license texts for the media, GIF, and TIFF bundles from installed packages into `vendor/generated/`.

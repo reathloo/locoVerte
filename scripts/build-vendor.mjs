@@ -4,12 +4,13 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
 await build({
-  entryPoints: ['scripts/media-vendor.js', 'scripts/tiff-vendor.js'],
+  entryPoints: ['scripts/media-vendor.js', 'scripts/gif-vendor.js', 'scripts/tiff-vendor.js'],
   outdir: 'vendor/generated',
   bundle: true,
   format: 'esm',
   platform: 'browser',
   target: 'es2022',
+  minify: true,
   sourcemap: false,
   legalComments: 'external',
 });

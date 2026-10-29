@@ -19,13 +19,15 @@ The optional **Remove metadata** setting is under **Adjust**. Same-format Office
 
 Expand **Adjust** to inspect locally detected EXIF/GPS, PNG text, PDF document properties, GIF comments/XMP, Office properties or media tags. Findings appear directly below the metadata checkbox. A missing finding does not prove that a file contains no other embedded private data.
 
+When several files are selected, each file has its own expandable **Adjust** section. Metadata removal, image dimensions, rotation, target size, and output name apply to that file only.
+
 **Redact areas locally** opens an image/PDF editor. Draw rectangles, apply a region across PDF pages, remove header/footer bands, or crop page edges. The export is rebuilt from rendered pixels so original PDF text and objects are absent. PDF search, links, forms and signatures are lost; animated images become a still JPEG. Review the output visually before sharing.
 
 **Edit PDF pages** can check for possibly blank pages and mark them for review. A separate action removes the marked pages from the new copy; at least one page is kept. The same editor can add page numbers, add a text watermark, and fit mixed page sizes onto A4 or US Letter pages without cropping. The original PDF stays unchanged. Signed or interactive PDFs are blocked from page editing.
 
 ## Install the stable release
 
-Download `locoverte-0.2.5.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases/latest)** and unzip it.
+Download `locoverte-0.2.6.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases/latest)** and unzip it.
 
 - **Chrome:** Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 - **Edge:** Follow the same steps at `edge://extensions`.

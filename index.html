@@ -168,7 +168,6 @@
             <input id="batch-quality" type="range" min="0" max="90" value="40" aria-describedby="batch-quality-direction">
             <div id="batch-quality-direction" class="range-hints"><span data-i18n="gentleHint">Gentle · high quality</span><span data-i18n="strongHint">Strong · lower quality</span></div>
           </div>
-          <label class="metadata-option"><input id="batch-remove-metadata" type="checkbox"><span><strong data-i18n="removeMetadata">Remove metadata</strong><small data-i18n="removeMetadataHelp">Removes embedded author, location, device and editing data.</small></span></label>
           <p id="batch-pdf-notice" class="warning" data-i18n="batchPdfNotice" hidden>Strong PDF compression creates image-only pages.</p>
           <div class="process-actions">
             <button id="batch-process" class="primary-button" type="button" data-i18n="batchProcess">Process all locally</button>
@@ -182,11 +181,11 @@
           </div>
           <p id="batch-progress" class="progress" role="status" hidden></p>
           <div id="batch-list" class="batch-list"></div>
+          <div id="batch-redact-host"></div>
         </section>
       </section>
       <footer><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span data-i18n="footer">Files stay on your device.</span></footer>
     </main>
-    <script src="vendor/pdf-lib/pdf-lib.min.js"></script>
     <script type="module" src="src/main.js"></script>
   </body>
 </html>
