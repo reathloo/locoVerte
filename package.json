@@ -1,10 +1,11 @@
 {
   "name": "locoverte",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "license": "GPL-3.0-only",
   "scripts": {
-    "build:vendor": "node scripts/build-vendor.mjs"
+    "build:vendor": "node scripts/build-vendor.mjs",
+    "test:metadata": "node --test tests/metadata.test.mjs"
   },
   "dependencies": {
     "@mediabunny/mp3-encoder": "^1.24.0",

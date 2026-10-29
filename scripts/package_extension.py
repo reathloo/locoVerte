@@ -20,6 +20,7 @@ REQUIRED_BUNDLES = {
     "src/clipboard-image.js",
     "src/limits.js",
     "src/seekable-blob.js",
+    "src/metadata.js",
     "vendor/generated/media-vendor.js",
     "vendor/generated/tiff-vendor.js",
     "vendor/generated/media-vendor.js.LEGAL.txt",

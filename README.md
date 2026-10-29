@@ -15,9 +15,11 @@ Convert and compress images, PDFs, Office documents, audio, and video right in y
 
 Media options are shown only when the browser can encode the required codec. GIF and MP3 encoding are bundled; M4A/AAC and video codecs use local browser support. Converting GIF to another image format uses its first frame; converting it to a video preserves the animation.
 
+The optional **Remove metadata** setting rebuilds outputs locally without embedded author, location, device or editing information. Images and media are re-encoded, animated GIF playback is preserved, and PDFs are rebuilt as image-only pages for reliable removal. This PDF mode removes searchable text, links, forms and signatures.
+
 ## Install the stable release
 
-Download `locoverte-0.2.4.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases/latest)** and unzip it.
+Download `locoverte-0.2.5.zip` from **[Releases](https://github.com/reathloo/locoVerte/releases/latest)** and unzip it.
 
 - **Chrome:** Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 - **Edge:** Follow the same steps at `edge://extensions`.

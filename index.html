@@ -77,6 +77,8 @@
             <input id="quality" type="range" min="0" max="90" value="40" aria-describedby="quality-direction">
             <div id="quality-direction" class="range-hints"><span data-i18n="gentleHint">Gentle · high quality</span><span data-i18n="strongHint">Strong · lower quality</span></div>
           </div>
+          <label class="metadata-option"><input id="remove-metadata" type="checkbox"><span><strong data-i18n="removeMetadata">Remove metadata</strong><small data-i18n="removeMetadataHelp">Removes embedded author, location, device and editing data.</small></span></label>
+          <p id="metadata-notice" class="warning" data-i18n="removeMetadataPdfWarning" hidden>PDF pages are rebuilt as images to remove metadata reliably. Search, links, forms and signatures are lost.</p>
           <details id="adjust-options" hidden>
             <summary><span id="adjust-label" data-i18n="imageAdjust">Adjust image</span><span id="adjust-summary" class="adjust-summary" hidden></span></summary>
             <div id="image-controls" class="image-options-grid">
@@ -141,6 +143,7 @@
             <input id="batch-quality" type="range" min="0" max="90" value="40" aria-describedby="batch-quality-direction">
             <div id="batch-quality-direction" class="range-hints"><span data-i18n="gentleHint">Gentle · high quality</span><span data-i18n="strongHint">Strong · lower quality</span></div>
           </div>
+          <label class="metadata-option"><input id="batch-remove-metadata" type="checkbox"><span><strong data-i18n="removeMetadata">Remove metadata</strong><small data-i18n="removeMetadataHelp">Removes embedded author, location, device and editing data.</small></span></label>
           <p id="batch-pdf-notice" class="warning" data-i18n="batchPdfNotice" hidden>Strong PDF compression creates image-only pages.</p>
           <div class="process-actions">
             <button id="batch-process" class="primary-button" type="button" data-i18n="batchProcess">Process all locally</button>

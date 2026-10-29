@@ -11,6 +11,7 @@ import { installFileDrop } from './file-drop.js';
 import { imageFromPaste, readClipboardImage } from './clipboard-image.js';
 import { editPdfPages, inspectPdfPages, mergePdfs } from './pdf-pages.js';
 import { MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE } from './limits.js';
+import { stripGifMetadata, stripPdfMetadata } from './metadata.js';
 
 const $ = (id) => document.getElementById(id);
 const quality = $('quality');
@@ -171,7 +172,7 @@ function stopEstimate() {
 }
 
 function setBusy(busy) {
-  for (const control of [quality, format, target, outputName, $('max-dimension'), $('output-width'), $('output-height'), $('rotation'), $('square-mode'), $('background-fill'), $('process')]) control.disabled = busy;
+  for (const control of [quality, format, target, outputName, $('max-dimension'), $('output-width'), $('output-height'), $('rotation'), $('square-mode'), $('background-fill'), $('remove-metadata'), $('process')]) control.disabled = busy;
   $('background-color').disabled = busy || !$('background-fill').checked;
   $('cancel').hidden = !busy;
   $('progress').hidden = !busy;
@@ -237,6 +238,7 @@ function renderSettings() {
       : ['image/gif', 'image/tiff'].includes(file.type) ? t('firstFrameNotice')
         : file.type === 'image/heic' ? t('heicNotice')
     : isPdfText ? t('pdfTextNotice') : outputType.includes('locoverte-') ? t('pdfImageNotice') : t(strength <= 30 ? 'pdfStructureNotice' : 'pdfRasterNotice');
+  $('metadata-notice').hidden = !$('remove-metadata').checked || !isPdf || outputType !== 'application/pdf';
   $('file-name').textContent = file.name;
   $('file-name').title = file.name;
   $('file-size').textContent = formatBytes(file.size);
@@ -305,6 +307,7 @@ function renderResult() {
   if (isPdf && result.blob.type === 'text/plain') $('result-stats').textContent += t('pdfTextResult');
   if (source.type.includes('officedocument')) $('result-stats').textContent += t('officeResultWarning');
   if (reducedFurther && !keepOriginal) $('result-stats').textContent += t('targetAdjusted');
+  if (result.metadataRemoved) $('result-stats').textContent += t('metadataRemovedResult');
   if (result.reason) $('result-stats').textContent += ` ${t(result.reason)}`;
   $('result-size').textContent = formatBytes(blob.size);
   $('download').textContent = t($('download').disabled ? 'downloadStarted' : downloadStarted ? 'downloadAgain' : 'download');
@@ -347,7 +350,7 @@ function scheduleEstimate() {
   estimateTimer = setTimeout(async () => {
     try {
       const options = isImage ? imageOptions() : {};
-      const data = config.isPdf ? await estimatePdf(source, config.value, controller.signal)
+      const data = config.isPdf ? await estimatePdf(source, $('remove-metadata').checked ? Math.min(config.value, 69) : config.value, controller.signal)
         : await compressImage(source, config.outputType, config.value, controller.signal, options);
       if (controller.signal.aborted) return;
       if (config.isPdf) estimateData = data;
@@ -396,6 +399,7 @@ async function selectFiles(candidates) {
     $('background-fill').checked = false;
     $('background-color').value = '#ffffff';
     $('background-color').disabled = true;
+    $('remove-metadata').checked = false;
     target.value = '';
     outputName.value = '';
     $('adjust-options').open = false;
@@ -439,12 +443,14 @@ function renderBatch() {
   const strength = Number($('batch-quality').value);
   $('batch-count').textContent = t('batchCount', { count: items.length });
   $('batch-quality').disabled = busy;
+  $('batch-remove-metadata').disabled = busy;
   $('batch-quality-output').textContent = t(strength <= 30 ? 'gentle' : strength <= 65 ? 'balanced' : 'strong');
   $('batch-quality').setAttribute('aria-valuetext', $('batch-quality-output').textContent);
   $('batch-workspace').dataset.quality = strength > 65 ? 'low' : strength > 30 ? 'medium' : 'good';
-  const pdfRaster = strength > 30 && items.some((item) => item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
+  const metadataPdf = $('batch-remove-metadata').checked && items.some((item) => item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
+  const pdfRaster = (strength > 30 || metadataPdf) && items.some((item) => item.source.type === 'application/pdf' && item.outputType === 'application/pdf');
   $('batch-pdf-notice').hidden = !pdfRaster && strength <= 65;
-  $('batch-pdf-notice').textContent = t(pdfRaster ? 'batchPdfNotice' : 'qualityMuchLower');
+  $('batch-pdf-notice').textContent = t(metadataPdf ? 'removeMetadataPdfWarning' : pdfRaster ? 'batchPdfNotice' : 'qualityMuchLower');
   $('batch-process').disabled = busy;
   $('batch-process').textContent = t(busy ? 'processing' : 'batchProcess');
   $('batch-zip').hidden = !items.some((item) => item.result);
@@ -507,13 +513,13 @@ function renderBatch() {
   }));
 }
 
-function batchResultText({ blob, source, keepOriginal, isPdf }) {
+function batchResultText({ blob, source, keepOriginal, isPdf, metadataRemoved }) {
   const change = Math.round((blob.size / source.size - 1) * 100);
   const difference = change < 0 ? `−${Math.abs(change)} %` : change > 0 ? `+${change} %` : '0 %';
   const warning = source.type.includes('officedocument') ? t('officeResultWarning')
     : isPdf && blob.type === 'text/plain' ? t('pdfTextResult')
       : isPdf && !keepOriginal && blob.type === 'application/pdf' ? t('pdfResultWarning') : '';
-  return `${t('batchDone')} · ${formatBytes(source.size)} → ${formatBytes(blob.size)} (${difference})${warning}`;
+  return `${t('batchDone')} · ${formatBytes(source.size)} → ${formatBytes(blob.size)} (${difference})${warning}${metadataRemoved ? t('metadataRemovedResult') : ''}`;
 }
 
 function outputFilename(current) {
@@ -664,7 +670,11 @@ for (const [id, selectedOnly] of [['pdf-pages-save', false], ['pdf-pages-extract
     $('pdf-pages-status').textContent = t('processingLocal');
     let started = false;
     try {
-      const blob = await editPdfPages(file, plan, controller.signal);
+      let blob = await editPdfPages(file, plan, controller.signal);
+      if ($('remove-metadata').checked) {
+        blob = (await compressPdf(blob, 69, null, controller.signal, () => {})).blob;
+        blob = await stripPdfMetadata(blob, controller.signal);
+      }
       downloadResult({ blob, filename: `${file.name.replace(/\.pdf$/i, '')}${selectedOnly ? '-pages' : '-edited'}.pdf` });
       $('error').hidden = true;
       started = true;
@@ -746,6 +756,11 @@ $('batch-quality').addEventListener('input', () => {
   for (const item of items) { item.result = null; item.error = ''; item.status = 'batchReady'; item.downloaded = false; item.downloadBlocked = false; }
   renderBatch();
 });
+$('batch-remove-metadata').addEventListener('change', () => {
+  mergedPdf = null;
+  for (const item of items) { item.result = null; item.error = ''; item.status = 'batchReady'; item.downloaded = false; item.downloadBlocked = false; }
+  renderBatch();
+});
 $('batch-zip').addEventListener('click', async () => {
   if (operation) return;
   const ready = items.filter((item) => item.result);
@@ -781,13 +796,17 @@ $('merge-pdf').addEventListener('click', async () => {
   renderBatch();
   try {
     const sources = items.map((item) => item.source);
-    const blob = imagesOnly
+    let blob = imagesOnly
       ? await imagesToPdf(sources, Number($('batch-quality').value), controller.signal, (key, values) => {
         $('batch-progress').textContent = t(key, values);
       })
       : await mergePdfs(sources, controller.signal, (current, total) => {
         $('batch-progress').textContent = t('batchProgress', { current, total, name: sources[current - 1].name });
       });
+    if ($('batch-remove-metadata').checked) {
+      if (pdfsOnly) blob = (await compressPdf(blob, 69, null, controller.signal, () => {})).blob;
+      blob = await stripPdfMetadata(blob, controller.signal);
+    }
     mergedPdf = { blob, filename: t(imagesOnly ? 'mergedPdfName' : 'mergedPdfsName') };
   } catch (error) {
     if (!controller.signal.aborted) showError(error instanceof Error ? error.message : t('processingError'));
@@ -812,6 +831,7 @@ $('merge-download').addEventListener('click', () => {
   }, 2000);
 });
 quality.addEventListener('input', changed);
+$('remove-metadata').addEventListener('change', changed);
 format.addEventListener('change', () => {
   const supportsTarget = file?.type.startsWith('image/') && format.value.startsWith('image/')
     && !(file.type === 'image/gif' && format.value === 'image/gif')
@@ -837,18 +857,18 @@ outputName.addEventListener('input', () => {
 });
 $('cancel').addEventListener('click', changed);
 
-async function convert(source, outputType, strength, targetBytes, cached, signal, updateProgress, options = {}) {
+async function convert(source, outputType, strength, targetBytes, cached, signal, updateProgress, options = {}, removeMetadata = false) {
   const value = 100 - strength;
   const transformed = hasImageAdjustments(options);
   const image = source.type.startsWith('image/') && outputType.startsWith('image/')
-    ? source.type === 'image/gif' && outputType === 'image/gif' && !transformed ? { blob: source }
-      : cached ?? (targetBytes && source.type === outputType && source.size <= targetBytes && !transformed ? { blob: source, targetMet: true }
+    ? source.type === 'image/gif' && outputType === 'image/gif' && !transformed ? { blob: removeMetadata ? await stripGifMetadata(source, signal) : source }
+      : cached ?? (targetBytes && source.type === outputType && source.size <= targetBytes && !transformed && !removeMetadata ? { blob: source, targetMet: true }
       : targetBytes ? await compressImageToTarget(source, outputType, targetBytes, signal, options) : await compressImage(source, outputType, value, signal, options)) : null;
   const conversion = image ?? (source.type === 'application/pdf' && outputType.includes('locoverte-')
     ? { blob: await pdfToImagesZip(source, outputType.includes('png-pages') ? 'image/png'
       : outputType.includes('webp-pages') ? 'image/webp' : outputType.includes('avif-pages') ? 'image/avif' : 'image/jpeg', strength, signal, updateProgress) }
     : source.type === 'application/pdf' && outputType === 'application/pdf'
-    ? await compressPdf(source, value, targetBytes, signal, updateProgress)
+    ? await compressPdf(source, removeMetadata ? Math.min(value, 69) : value, targetBytes, signal, updateProgress)
     : { blob: source.type === 'application/pdf' ? await pdfToText(source, signal, updateProgress)
       : source.type === 'image/gif' && outputType.startsWith('video/') ? await convertMedia(source, outputType, strength, signal, updateProgress)
         : source.type.startsWith('image/') ? await imageToPdf(source, strength, signal)
@@ -856,10 +876,11 @@ async function convert(source, outputType, strength, targetBytes, cached, signal
           : outputType === 'application/pdf' ? await officeToPdf(source, signal)
             : outputType === 'text/csv' ? await xlsxToCsv(source, signal)
               : source.type.includes('presentationml') ? await pptxToText(source, signal) : await docxToText(source, signal) });
+  if (removeMetadata && conversion.blob.type === 'application/pdf') conversion.blob = await stripPdfMetadata(conversion.blob, signal);
   signal.throwIfAborted();
   const sameFormat = source.type === outputType;
-  const keepOriginal = sameFormat && !transformed && conversion.blob.size >= source.size;
-  return { blob: keepOriginal ? source : conversion.blob, source, sameFormat, keepOriginal, targetBytes, isPdf: source.type === 'application/pdf', reducedFurther: conversion.reducedFurther, reason: conversion.reason, image };
+  const keepOriginal = !removeMetadata && sameFormat && !transformed && conversion.blob.size >= source.size;
+  return { blob: keepOriginal ? source : conversion.blob, source, sameFormat, keepOriginal, targetBytes, isPdf: source.type === 'application/pdf', reducedFurther: conversion.reducedFurther, reason: conversion.reason, image, metadataRemoved: removeMetadata };
 }
 
 $('batch-process').addEventListener('click', async () => {
@@ -882,7 +903,7 @@ $('batch-process').addEventListener('click', async () => {
     try {
       item.result = await convert(item.source, item.outputType, Number($('batch-quality').value), null, null, controller.signal, (key, values) => {
         $('batch-progress').textContent = `${t('batchProgress', { current: index + 1, total: pending.length, name: item.source.name })} · ${t(key, values)}`;
-      });
+      }, {}, $('batch-remove-metadata').checked);
       item.status = 'batchDone';
     } catch (error) {
       if (controller.signal.aborted) { item.status = 'batchReady'; break; }
@@ -921,7 +942,7 @@ $('process').addEventListener('click', async () => {
   setBusy(true);
   updateProgress('processingLocal');
   try {
-    result = await convert(source, config.outputType, config.strength, targetBytes, targetBytes ? null : cached, controller.signal, updateProgress, options);
+    result = await convert(source, config.outputType, config.strength, targetBytes, targetBytes ? null : cached, controller.signal, updateProgress, options, $('remove-metadata').checked);
     applyOutputName(result);
     const { image, keepOriginal } = result;
     if (image) { imageCache = image; renderSettings(); }
