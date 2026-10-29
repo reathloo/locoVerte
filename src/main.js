@@ -9,7 +9,7 @@ import { zipBlobs } from './zip.js';
 import { fillUploadField } from './upload-field.js';
 import { installFileDrop } from './file-drop.js';
 import { imageFromPaste, readClipboardImage } from './clipboard-image.js';
-import { editPdfPages, inspectPdfPages, mergePdfs } from './pdf-pages.js';
+import { editPdfPages, findBlankPdfPages, inspectPdfPages, mergePdfs } from './pdf-pages.js';
 import { MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE } from './limits.js';
 import { stripGifMetadata, stripPdfMetadata } from './metadata.js';
 import { inspectPrivacy } from './privacy-inspection.js';
@@ -38,6 +38,7 @@ let progressMessage = null;
 let mergedPdf = null;
 let pdfPageSource = null;
 let pdfPageDraft = null;
+let pdfBlankIndexes = new Set();
 let pdfPageLoad = 0;
 let pdfPageDownloadBlocked = false;
 let uploadTabId = Number(new URL(location.href).searchParams.get('sourceTab')) || null;
@@ -585,9 +586,14 @@ function resetPdfPages() {
   pdfPageLoad += 1;
   pdfPageSource = null;
   pdfPageDraft = null;
+  pdfBlankIndexes = new Set();
   pdfPageDownloadBlocked = false;
   $('pdf-pages-tools').open = false;
   $('pdf-pages-status').textContent = '';
+  $('pdf-blank-status').textContent = '';
+  $('pdf-add-numbers').checked = false;
+  $('pdf-watermark').value = '';
+  $('pdf-page-size').value = 'original';
   $('pdf-pages-list').replaceChildren();
 }
 
@@ -597,6 +603,9 @@ function renderPdfPages() {
   $('pdf-pages-save').disabled = !ready || busy || pdfPageDownloadBlocked;
   $('pdf-pages-extract').disabled = !ready || busy || pdfPageDownloadBlocked || !pdfPageDraft.some((page) => page.selected);
   $('pdf-pages-reset').disabled = !ready || busy;
+  $('pdf-blank-check').disabled = !ready || busy;
+  $('pdf-blank-remove').disabled = !ready || busy || !pdfPageDraft.some((page) => pdfBlankIndexes.has(page.sourceIndex)) || pdfPageDraft.every((page) => pdfBlankIndexes.has(page.sourceIndex));
+  for (const id of ['pdf-add-numbers', 'pdf-watermark', 'pdf-page-size']) $(id).disabled = !ready || busy;
   if (!ready) return;
   $('pdf-pages-status').textContent = t(pdfPageDraft.length === 1 ? 'pdfPagesOne' : 'pdfPagesCount', { count: pdfPageDraft.length });
   $('pdf-pages-list').replaceChildren(...pdfPageDraft.map((page, index) => {
@@ -610,7 +619,7 @@ function renderPdfPages() {
     checkbox.disabled = busy;
     checkbox.setAttribute('aria-label', t('pdfPageSelect', { number: page.sourceIndex + 1 }));
     const name = document.createElement('span');
-    name.textContent = `${t('pdfPageLabel', { number: page.sourceIndex + 1 })}${page.rotation ? ` · ${page.rotation}°` : ''}`;
+    name.textContent = `${t('pdfPageLabel', { number: page.sourceIndex + 1 })}${page.rotation ? ` · ${page.rotation}°` : ''}${pdfBlankIndexes.has(page.sourceIndex) ? ` · ${t('pdfPossiblyBlank')}` : ''}`;
     label.append(checkbox, name);
     row.append(label);
     for (const [action, symbol, disabled] of [['up', '↑', index === 0], ['down', '↓', index === pdfPageDraft.length - 1], ['rotate', '↻', false], ['remove', '×', pdfPageDraft.length === 1]]) {
@@ -637,6 +646,7 @@ async function loadPdfPages() {
     if (request !== pdfPageLoad || file !== source) return;
     pdfPageSource = source;
     pdfPageDraft = pages.map((page) => ({ ...page, selected: false }));
+    pdfBlankIndexes = new Set();
     renderPdfPages();
   } catch (error) {
     if (request === pdfPageLoad && file === source) $('pdf-pages-status').textContent = error.message;
@@ -679,6 +689,36 @@ window.addEventListener('paste', (event) => {
 $('pdf-pages-tools').addEventListener('toggle', () => {
   if ($('pdf-pages-tools').open) loadPdfPages();
 });
+$('pdf-blank-check').addEventListener('click', async () => {
+  if (!file || !pdfPageDraft || operation) return;
+  const source = file;
+  const controller = new AbortController();
+  operation = controller;
+  setBusy(true);
+  $('pdf-blank-status').textContent = t('pdfBlankChecking');
+  try {
+    const found = await findBlankPdfPages(source, controller.signal, (current, total) => {
+      $('pdf-blank-status').textContent = t('pageProgress', { page: current, total });
+    });
+    if (file !== source) return;
+    pdfBlankIndexes = new Set(found);
+    $('pdf-blank-status').textContent = found.length ? t('pdfBlankFound', { count: found.length }) : t('pdfBlankNone');
+  } catch (error) {
+    if (!controller.signal.aborted) $('pdf-blank-status').textContent = error.message;
+  } finally {
+    if (operation === controller) { operation = null; setBusy(false); }
+    renderPdfPages();
+  }
+});
+$('pdf-blank-remove').addEventListener('click', () => {
+  if (!pdfPageDraft || operation) return;
+  const remaining = pdfPageDraft.filter((page) => !pdfBlankIndexes.has(page.sourceIndex));
+  if (!remaining.length) return;
+  const removed = pdfPageDraft.length - remaining.length;
+  pdfPageDraft = remaining;
+  $('pdf-blank-status').textContent = t('pdfBlankRemoved', { count: removed });
+  renderPdfPages();
+});
 $('pdf-pages-list').addEventListener('change', (event) => {
   if (!pdfPageDraft || event.target.type !== 'checkbox' || operation) return;
   const index = Number(event.target.closest('.pdf-page-row').dataset.index);
@@ -714,7 +754,11 @@ for (const [id, selectedOnly] of [['pdf-pages-save', false], ['pdf-pages-extract
     $('pdf-pages-status').textContent = t('processingLocal');
     let started = false;
     try {
-      let blob = await editPdfPages(file, plan, controller.signal);
+      let blob = await editPdfPages(file, plan, controller.signal, {
+        pageNumbers: $('pdf-add-numbers').checked,
+        watermark: $('pdf-watermark').value,
+        pageSize: $('pdf-page-size').value,
+      });
       if ($('remove-metadata').checked) {
         blob = (await compressPdf(blob, 69, null, controller.signal, () => {})).blob;
         blob = await stripPdfMetadata(blob, controller.signal);

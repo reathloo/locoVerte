@@ -160,6 +160,13 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 2px s
 .pdf-page-row button:disabled { opacity: .4; cursor: default; }
 .pdf-pages-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; }
 .pdf-pages-actions .secondary-button { min-height: 32px; padding: 6px 9px; font-size: 11px; }
+.pdf-blank-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; }
+.pdf-blank-tools .secondary-button { min-height: 32px; padding: 6px 9px; font-size: 11px; }
+.pdf-blank-tools p { flex-basis: 100%; margin: 0; }
+.pdf-page-options { margin-top: 12px; padding-top: 3px; }
+.pdf-page-options .metadata-option { margin: 8px 0; }
+.pdf-page-options .adjust-field { margin-top: 10px; }
+.pdf-page-options > .field-help { margin-top: 8px; }
 .batch-workspace { padding-top: 18px; }
 .batch-heading, .batch-item-head, .batch-item-details { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .batch-heading { color: var(--muted); font-size: 12px; }

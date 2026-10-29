@@ -31,7 +31,7 @@ jobs:
       - name: Test store package
         run: |
           python -m unittest discover -s tests -p 'test_*.py'
-          pnpm test:metadata
+          pnpm test:local
       - name: Build store package
         run: python scripts/package_extension.py
       - name: Lint packaged Firefox extension

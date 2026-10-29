@@ -8,7 +8,7 @@ import { zipBlobs } from '../src/zip.js';
 import { fillUploadField } from '../src/upload-field.js';
 import { installFileDrop } from '../src/file-drop.js';
 import { imageFromPaste } from '../src/clipboard-image.js';
-import { editPdfPages, inspectPdfPages, mergePdfs } from '../src/pdf-pages.js';
+import { editPdfPages, findBlankPdfPages, inspectPdfPages, mergePdfs } from '../src/pdf-pages.js';
 import { createSeekableBlob } from '../src/seekable-blob.js';
 import { MAX_FILE_SIZE, MAX_MEDIA_FILE_SIZE, MAX_PDF_PAGES } from '../src/limits.js';
 
@@ -245,6 +245,15 @@ async function run(files) {
     let rejected = false;
     try { await editPdfPages(source, [{ sourceIndex: 2, rotation: 0 }], signal()); } catch { rejected = true; }
     assert(rejected, 'Invalid page index accepted');
+  });
+  await check('PDF blank-page detector flags only visibly empty pages', async () => {
+    const document = await PDFLib.PDFDocument.create();
+    document.addPage([200, 300]);
+    document.addPage([200, 300]).drawText('Visible text');
+    document.addPage([200, 300]).drawRectangle({ x: 20, y: 20, width: 80, height: 80, color: PDFLib.rgb(0, 0, 0) });
+    const source = new File([await document.save()], 'blank-check.pdf', { type: 'application/pdf' });
+    const found = await findBlankPdfPages(source, signal());
+    assert(found.length === 1 && found[0] === 0, 'Blank-page detection missed or misclassified a page');
   });
   await check('700-page PDF is accepted; 1,001 pages are rejected', async () => {
     const document = await PDFLib.PDFDocument.create();

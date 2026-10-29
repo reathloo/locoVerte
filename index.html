@@ -142,7 +142,18 @@
           <summary data-i18n="pdfPagesTitle">Edit PDF pages</summary>
           <p class="field-help" data-i18n="pdfPagesHelp">Reorder, rotate or remove pages. The original stays unchanged.</p>
           <p id="pdf-pages-status" class="field-help" role="status"></p>
+          <div class="pdf-blank-tools">
+            <button id="pdf-blank-check" class="secondary-button" type="button" data-i18n="pdfBlankCheck">Check for blank pages</button>
+            <button id="pdf-blank-remove" class="secondary-button" type="button" data-i18n="pdfBlankRemove" disabled>Remove detected blank pages</button>
+            <p id="pdf-blank-status" class="field-help" role="status"></p>
+          </div>
           <div id="pdf-pages-list" class="pdf-pages-list"></div>
+          <div class="pdf-page-options">
+            <label class="metadata-option"><input id="pdf-add-numbers" type="checkbox"><span data-i18n="pdfAddNumbers">Add page numbers</span></label>
+            <div class="adjust-field"><label for="pdf-watermark" data-i18n="pdfWatermark">Watermark text (optional)</label><input id="pdf-watermark" type="text" maxlength="80" placeholder="e.g. DRAFT" data-i18n-placeholder="pdfWatermarkPlaceholder"></div>
+            <div class="adjust-field"><label for="pdf-page-size" data-i18n="pdfPageSize">Make page size uniform</label><select id="pdf-page-size"><option value="original" data-i18n="pdfPageSizeOriginal">Keep original sizes</option><option value="a4" data-i18n="pdfA4">A4 portrait</option><option value="a4Landscape" data-i18n="pdfA4Landscape">A4 landscape</option><option value="letter" data-i18n="pdfLetter">US Letter portrait</option><option value="letterLandscape" data-i18n="pdfLetterLandscape">US Letter landscape</option></select></div>
+            <p class="field-help" data-i18n="pdfPageSizeHelp">Pages are fitted with margins; content is not cropped.</p>
+          </div>
           <div class="pdf-pages-actions">
             <button id="pdf-pages-save" class="secondary-button" type="button" data-i18n="pdfPagesSave">Download edited PDF</button>
             <button id="pdf-pages-extract" class="secondary-button" type="button" data-i18n="pdfPagesExtract">Download selected pages</button>
