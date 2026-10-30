@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import pdfLib from '../vendor/pdf-lib/pdf-lib.min.js';
+import pdfLib from '../vendor/pdf-lib/pdf-lib.js';
 
 globalThis.PDFLib = pdfLib;
 const { inspectPrivacy } = await import('../src/privacy-inspection.js');

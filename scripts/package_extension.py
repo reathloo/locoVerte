@@ -38,6 +38,7 @@ REQUIRED_BUNDLES = {
     "vendor/generated/UTIF-LICENSE",
     "vendor/generated/PAKO-LICENSE",
     "vendor/generated/PAKO-ZLIB-NOTICE",
+    "vendor/pdf-lib/pdf-lib.js",
 }
 TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 

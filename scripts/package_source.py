@@ -37,10 +37,15 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
         for name in source_paths():
-            info = ZipInfo(name, TIMESTAMP)
+            archive_name = "PROJECT_README.md" if name == "README.md" else name
+            info = ZipInfo(archive_name, TIMESTAMP)
             info.compress_type = ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, (ROOT / name).read_bytes(), compress_type=ZIP_DEFLATED, compresslevel=9)
+        info = ZipInfo("README.md", TIMESTAMP)
+        info.compress_type = ZIP_DEFLATED
+        info.external_attr = 0o100644 << 16
+        archive.writestr(info, (ROOT / "AMO_REVIEW.md").read_bytes(), compress_type=ZIP_DEFLATED, compresslevel=9)
     print(f"{output}: source for version {version}")
 
 

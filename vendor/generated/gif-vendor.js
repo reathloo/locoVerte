@@ -1,1 +1,1420 @@
-var Me=Object.create;var oe=Object.defineProperty;var Ie=Object.getOwnPropertyDescriptor;var Ce=Object.getOwnPropertyNames;var ze=Object.getPrototypeOf,Ue=Object.prototype.hasOwnProperty;var E=(t,e)=>()=>(e||t((e={exports:{}}).exports,e),e.exports);var Fe=(t,e,n,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let i of Ce(e))!Ue.call(t,i)&&i!==n&&oe(t,i,{get:()=>e[i],enumerable:!(r=Ie(e,i))||r.enumerable});return t};var ae=(t,e,n)=>(n=t!=null?Me(ze(t)):{},Fe(e||!t||!t.__esModule?oe(n,"default",{value:t,enumerable:!0}):n,t));var be=E(ee=>{var ue=Object.defineProperty,Te=t=>ue(t,"__esModule",{value:!0}),qe=(t,e)=>{for(var n in e)ue(t,n,{get:e[n],enumerable:!0})};Te(ee);qe(ee,{GIFEncoder:()=>he,applyPalette:()=>Le,default:()=>$e,nearestColor:()=>Ke,nearestColorIndex:()=>ye,nearestColorIndexWithDistance:()=>ve,prequantize:()=>Ve,quantize:()=>Oe,snapColorsToPalette:()=>Ze});var Pe={signature:"GIF",version:"89a",trailer:59,extensionIntroducer:33,applicationExtensionLabel:255,graphicControlExtensionLabel:249,imageSeparator:44,signatureSize:3,versionSize:3,globalColorTableFlagMask:128,colorResolutionMask:112,sortFlagMask:8,globalColorTableSizeMask:7,applicationIdentifierSize:8,applicationAuthCodeSize:3,disposalMethodMask:28,userInputFlagMask:2,transparentColorFlagMask:1,localColorTableFlagMask:128,interlaceFlagMask:64,idSortFlagMask:32,localColorTableSizeMask:7};function fe(t=256){let e=0,n=new Uint8Array(t);return{get buffer(){return n.buffer},reset(){e=0},bytesView(){return n.subarray(0,e)},bytes(){return n.slice(0,e)},writeByte(i){r(e+1),n[e]=i,e++},writeBytes(i,o=0,c=i.length){r(e+c);for(let a=0;a<c;a++)n[e++]=i[a+o]},writeBytesView(i,o=0,c=i.byteLength){r(e+c),n.set(i.subarray(o,o+c),e),e+=c}};function r(i){var o=n.length;if(o>=i)return;var c=1024*1024;i=Math.max(i,o*(o<c?2:1.125)>>>0),o!=0&&(i=Math.max(i,256));let a=n;n=new Uint8Array(i),e>0&&n.set(a.subarray(0,e),0)}}var J=12,ce=5003,Ee=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535];function Ge(t,e,n,r,i=fe(512),o=new Uint8Array(256),c=new Int32Array(ce),a=new Int32Array(ce)){let f=c.length,u=Math.max(2,r);o.fill(0),a.fill(0),c.fill(-1);let l=0,s=0,g=u+1,h=g,d=!1,v=h,_=(1<<v)-1,p=1<<g-1,I=p+1,x=p+2,w=0,A=n[0],M=0;for(let b=f;b<65536;b*=2)++M;M=8-M,i.writeByte(u),S(p);let B=n.length;for(let b=1;b<B;b++)e:{let C=n[b],z=(C<<J)+A,m=C<<M^A;if(c[m]===z){A=a[m];break e}let W=m===0?1:f-m;for(;c[m]>=0;)if(m-=W,m<0&&(m+=f),c[m]===z){A=a[m];break e}S(A),A=C,x<1<<J?(a[m]=x++,c[m]=z):(c.fill(-1),x=p+2,d=!0,S(p))}return S(A),S(I),i.writeByte(0),i.bytesView();function S(b){for(l&=Ee[s],s>0?l|=b<<s:l=b,s+=v;s>=8;)o[w++]=l&255,w>=254&&(i.writeByte(w),i.writeBytesView(o,0,w),w=0),l>>=8,s-=8;if((x>_||d)&&(d?(v=h,_=(1<<v)-1,d=!1):(++v,_=v===J?1<<v:(1<<v)-1)),b==I){for(;s>0;)o[w++]=l&255,w>=254&&(i.writeByte(w),i.writeBytesView(o,0,w),w=0),l>>=8,s-=8;w>0&&(i.writeByte(w),i.writeBytesView(o,0,w),w=0)}}}var De=Ge;function de(t,e,n){return t<<8&63488|e<<2&992|n>>3}function pe(t,e,n,r){return t>>4|e&240|(n&240)<<4|(r&240)<<8}function ge(t,e,n){return t>>4<<8|e&240|n>>4}function O(t,e,n){return t<e?e:t>n?n:t}function j(t){return t*t}function se(t,e,n){var r=0,i=1e100;let o=t[e],c=o.cnt,a=o.ac,f=o.rc,u=o.gc,l=o.bc;for(var s=o.fw;s!=0;s=t[s].fw){let h=t[s],d=h.cnt,v=c*d/(c+d);if(!(v>=i)){var g=0;n&&(g+=v*j(h.ac-a),g>=i)||(g+=v*j(h.rc-f),!(g>=i)&&(g+=v*j(h.gc-u),!(g>=i)&&(g+=v*j(h.bc-l),!(g>=i)&&(i=g,r=s))))}}o.err=i,o.nn=r}function Q(){return{ac:0,rc:0,gc:0,bc:0,cnt:0,nn:0,fw:0,bk:0,tm:0,mtm:0,err:0}}function je(t,e){let n=e==="rgb444"?4096:65536,r=new Array(n),i=t.length;if(e==="rgba4444")for(let o=0;o<i;++o){let c=t[o],a=c>>24&255,f=c>>16&255,u=c>>8&255,l=c&255,s=pe(l,u,f,a),g=s in r?r[s]:r[s]=Q();g.rc+=l,g.gc+=u,g.bc+=f,g.ac+=a,g.cnt++}else if(e==="rgb444")for(let o=0;o<i;++o){let c=t[o],a=c>>16&255,f=c>>8&255,u=c&255,l=ge(u,f,a),s=l in r?r[l]:r[l]=Q();s.rc+=u,s.gc+=f,s.bc+=a,s.cnt++}else for(let o=0;o<i;++o){let c=t[o],a=c>>16&255,f=c>>8&255,u=c&255,l=de(u,f,a),s=l in r?r[l]:r[l]=Q();s.rc+=u,s.gc+=f,s.bc+=a,s.cnt++}return r}function Oe(t,e,n={}){let{format:r="rgb565",clearAlpha:i=!0,clearAlphaColor:o=0,clearAlphaThreshold:c=0,oneBitAlpha:a=!1}=n;if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");let f=new Uint32Array(t.buffer),u=n.useSqrt!==!1,l=r==="rgba4444",s=je(f,r),g=s.length,h=g-1,d=new Uint32Array(g+1);for(var v=0,p=0;p<g;++p){let U=s[p];if(U!=null){var _=1/U.cnt;l&&(U.ac*=_),U.rc*=_,U.gc*=_,U.bc*=_,s[v++]=U}}j(e)/v<.022&&(u=!1);for(var p=0;p<v-1;++p)s[p].fw=p+1,s[p+1].bk=p,u&&(s[p].cnt=Math.sqrt(s[p].cnt));u&&(s[p].cnt=Math.sqrt(s[p].cnt));var I,x,w;for(p=0;p<v;++p){se(s,p,!1);var A=s[p].err;for(x=++d[0];x>1&&(w=x>>1,!(s[I=d[w]].err<=A));x=w)d[x]=I;d[x]=p}var M=v-e;for(p=0;p<M;){for(var B;;){var S=d[1];if(B=s[S],B.tm>=B.mtm&&s[B.nn].mtm<=B.tm)break;B.mtm==h?S=d[1]=d[d[0]--]:(se(s,S,!1),B.tm=p);var A=s[S].err;for(x=1;(w=x+x)<=d[0]&&(w<d[0]&&s[d[w]].err>s[d[w+1]].err&&w++,!(A<=s[I=d[w]].err));x=w)d[x]=I;d[x]=S}var b=s[B.nn],C=B.cnt,z=b.cnt,_=1/(C+z);l&&(B.ac=_*(C*B.ac+z*b.ac)),B.rc=_*(C*B.rc+z*b.rc),B.gc=_*(C*B.gc+z*b.gc),B.bc=_*(C*B.bc+z*b.bc),B.cnt+=b.cnt,B.mtm=++p,s[b.bk].fw=b.fw,s[b.fw].bk=b.bk,b.mtm=h}let m=[];var W=0;for(p=0;;++W){let X=O(Math.round(s[p].rc),0,255),U=O(Math.round(s[p].gc),0,255),Y=O(Math.round(s[p].bc),0,255),D=255;l&&(D=O(Math.round(s[p].ac),0,255),a&&(D=D<=(typeof a=="number"?a:127)?0:255),i&&D<=c&&(X=U=Y=o,D=0));let ie=l?[X,U,Y,D]:[X,U,Y];if(Re(m,ie)||m.push(ie),(p=s[p].fw)==0)break}return m}function Re(t,e){for(let n=0;n<t.length;n++){let r=t[n],i=r[0]===e[0]&&r[1]===e[1]&&r[2]===e[2],o=r.length>=4&&e.length>=4?r[3]===e[3]:!0;if(i&&o)return!0}return!1}function V(t,e){var n=0,r;for(r=0;r<t.length;r++){let i=t[r]-e[r];n+=i*i}return n}function R(t,e){return e>1?Math.round(t/e)*e:t}function Ve(t,{roundRGB:e=5,roundAlpha:n=10,oneBitAlpha:r=null}={}){let i=new Uint32Array(t.buffer);for(let o=0;o<i.length;o++){let c=i[o],a=c>>24&255,f=c>>16&255,u=c>>8&255,l=c&255;a=R(a,n),r&&(a=a<=(typeof r=="number"?r:127)?0:255),l=R(l,e),u=R(u,e),f=R(f,e),i[o]=a<<24|f<<16|u<<8|l<<0}}function Le(t,e,n="rgb565"){if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");if(e.length>256)throw new Error("applyPalette() only works with 256 colors or less");let r=new Uint32Array(t.buffer),i=r.length,o=n==="rgb444"?4096:65536,c=new Uint8Array(i),a=new Array(o),f=n==="rgba4444";if(n==="rgba4444")for(let u=0;u<i;u++){let l=r[u],s=l>>24&255,g=l>>16&255,h=l>>8&255,d=l&255,v=pe(d,h,g,s),_=v in a?a[v]:a[v]=He(d,h,g,s,e);c[u]=_}else{let u=n==="rgb444"?ge:de;for(let l=0;l<i;l++){let s=r[l],g=s>>16&255,h=s>>8&255,d=s&255,v=u(d,h,g),_=v in a?a[v]:a[v]=Ne(d,h,g,e);c[l]=_}}return c}function He(t,e,n,r,i){let o=0,c=1e100;for(let a=0;a<i.length;a++){let f=i[a],u=f[3],l=G(u-r);if(l>c)continue;let s=f[0];if(l+=G(s-t),l>c)continue;let g=f[1];if(l+=G(g-e),l>c)continue;let h=f[2];l+=G(h-n),!(l>c)&&(c=l,o=a)}return o}function Ne(t,e,n,r){let i=0,o=1e100;for(let c=0;c<r.length;c++){let a=r[c],f=a[0],u=G(f-t);if(u>o)continue;let l=a[1];if(u+=G(l-e),u>o)continue;let s=a[2];u+=G(s-n),!(u>o)&&(o=u,i=c)}return i}function Ze(t,e,n=5){if(!t.length||!e.length)return;let r=t.map(c=>c.slice(0,3)),i=n*n,o=t[0].length;for(let c=0;c<e.length;c++){let a=e[c];a.length<o?a=[a[0],a[1],a[2],255]:a.length>o?a=a.slice(0,3):a=a.slice();let f=ve(r,a.slice(0,3),V),u=f[0],l=f[1];l>0&&l<=i&&(t[u]=a)}}function G(t){return t*t}function ye(t,e,n=V){let r=1/0,i=-1;for(let o=0;o<t.length;o++){let c=t[o],a=n(e,c);a<r&&(r=a,i=o)}return i}function ve(t,e,n=V){let r=1/0,i=-1;for(let o=0;o<t.length;o++){let c=t[o],a=n(e,c);a<r&&(r=a,i=o)}return[i,r]}function Ke(t,e,n=V){return t[ye(t,e,n)]}function he(t={}){let{initialCapacity:e=4096,auto:n=!0}=t,r=fe(e),i=5003,o=new Uint8Array(256),c=new Int32Array(i),a=new Int32Array(i),f=!1;return{reset(){r.reset(),f=!1},finish(){r.writeByte(Pe.trailer)},bytes(){return r.bytes()},bytesView(){return r.bytesView()},get buffer(){return r.buffer},get stream(){return r},writeHeader:u,writeFrame(l,s,g,h={}){let{transparent:d=!1,transparentIndex:v=0,delay:_=0,palette:p=null,repeat:I=0,colorDepth:x=8,dispose:w=-1}=h,A=!1;if(n?f||(A=!0,u(),f=!0):A=!!h.first,s=Math.max(0,Math.floor(s)),g=Math.max(0,Math.floor(g)),A){if(!p)throw new Error("First frame must include a { palette } option");Xe(r,s,g,p,x),le(r,p),I>=0&&Ye(r,I)}let M=Math.round(_/10);We(r,w,M,d,v);let B=!!p&&!A;Je(r,s,g,B?p:null),B&&le(r,p),Qe(r,l,s,g,x,o,c,a)}};function u(){we(r,"GIF89a")}}function We(t,e,n,r,i){t.writeByte(33),t.writeByte(249),t.writeByte(4),i<0&&(i=0,r=!1);var o,c;r?(o=1,c=2):(o=0,c=0),e>=0&&(c=e&7),c<<=2,t.writeByte(0|c|0|o),F(t,n),t.writeByte(i||0),t.writeByte(0)}function Xe(t,e,n,r,i=8){let a=$(r.length)-1,f=128|i-1<<4|0|a,u=0,l=0;F(t,e),F(t,n),t.writeBytes([f,u,l])}function Ye(t,e){t.writeByte(33),t.writeByte(255),t.writeByte(11),we(t,"NETSCAPE2.0"),t.writeByte(3),t.writeByte(1),F(t,e),t.writeByte(0)}function le(t,e){let n=1<<$(e.length);for(let r=0;r<n;r++){let i=[0,0,0];r<e.length&&(i=e[r]),t.writeByte(i[0]),t.writeByte(i[1]),t.writeByte(i[2])}}function Je(t,e,n,r){if(t.writeByte(44),F(t,0),F(t,0),F(t,e),F(t,n),r){let c=$(r.length)-1;t.writeByte(128|c)}else t.writeByte(0)}function Qe(t,e,n,r,i=8,o,c,a){De(n,r,e,i,t,o,c,a)}function F(t,e){t.writeByte(e&255),t.writeByte(e>>8&255)}function we(t,e){for(var n=0;n<e.length;n++)t.writeByte(e.charCodeAt(n))}function $(t){return Math.max(Math.ceil(Math.log2(t)),1)}var $e=he});var te=E(T=>{"use strict";Object.defineProperty(T,"__esModule",{value:!0});T.loop=T.conditional=T.parse=void 0;var et=function t(e,n){var r=arguments.length>2&&arguments[2]!==void 0?arguments[2]:{},i=arguments.length>3&&arguments[3]!==void 0?arguments[3]:r;if(Array.isArray(n))n.forEach(function(c){return t(e,c,r,i)});else if(typeof n=="function")n(e,r,i,t);else{var o=Object.keys(n)[0];Array.isArray(n[o])?(i[o]={},t(e,n[o],r,i[o])):i[o]=n[o](e,r,i,t)}return r};T.parse=et;var tt=function(e,n){return function(r,i,o,c){n(r,i,o)&&c(r,e,i,o)}};T.conditional=tt;var rt=function(e,n){return function(r,i,o,c){for(var a=[],f=r.pos;n(r,i,o);){var u={};if(c(r,e,i,u),r.pos===f)break;f=r.pos,a.push(u)}return a}};T.loop=rt});var re=E(k=>{"use strict";Object.defineProperty(k,"__esModule",{value:!0});k.readBits=k.readArray=k.readUnsigned=k.readString=k.peekBytes=k.readBytes=k.peekByte=k.readByte=k.buildStream=void 0;var nt=function(e){return{data:e,pos:0}};k.buildStream=nt;var xe=function(){return function(e){return e.data[e.pos++]}};k.readByte=xe;var it=function(){var e=arguments.length>0&&arguments[0]!==void 0?arguments[0]:0;return function(n){return n.data[n.pos+e]}};k.peekByte=it;var L=function(e){return function(n){return n.data.subarray(n.pos,n.pos+=e)}};k.readBytes=L;var ot=function(e){return function(n){return n.data.subarray(n.pos,n.pos+e)}};k.peekBytes=ot;var at=function(e){return function(n){return Array.from(L(e)(n)).map(function(r){return String.fromCharCode(r)}).join("")}};k.readString=at;var ct=function(e){return function(n){var r=L(2)(n);return e?(r[1]<<8)+r[0]:(r[0]<<8)+r[1]}};k.readUnsigned=ct;var st=function(e,n){return function(r,i,o){for(var c=typeof n=="function"?n(r,i,o):n,a=L(e),f=new Array(c),u=0;u<c;u++)f[u]=a(r);return f}};k.readArray=st;var lt=function(e,n,r){for(var i=0,o=0;o<r;o++)i+=e[n+o]&&Math.pow(2,r-o-1);return i},ut=function(e){return function(n){for(var r=xe()(n),i=new Array(8),o=0;o<8;o++)i[7-o]=!!(r&1<<o);return Object.keys(e).reduce(function(c,a){var f=e[a];return f.length?c[a]=lt(i,f.index,f.length):c[a]=i[f.index],c},{})}};k.readBits=ut});var Be=E(N=>{"use strict";Object.defineProperty(N,"__esModule",{value:!0});N.default=void 0;var q=te(),y=re(),H={blocks:function(e){for(var n=0,r=[],i=e.data.length,o=0,c=(0,y.readByte)()(e);c!==n&&c;c=(0,y.readByte)()(e)){if(e.pos+c>=i){var a=i-e.pos;r.push((0,y.readBytes)(a)(e)),o+=a;break}r.push((0,y.readBytes)(c)(e)),o+=c}for(var f=new Uint8Array(o),u=0,l=0;l<r.length;l++)f.set(r[l],u),u+=r[l].length;return f}},ft=(0,q.conditional)({gce:[{codes:(0,y.readBytes)(2)},{byteSize:(0,y.readByte)()},{extras:(0,y.readBits)({future:{index:0,length:3},disposal:{index:3,length:3},userInput:{index:6},transparentColorGiven:{index:7}})},{delay:(0,y.readUnsigned)(!0)},{transparentColorIndex:(0,y.readByte)()},{terminator:(0,y.readByte)()}]},function(t){var e=(0,y.peekBytes)(2)(t);return e[0]===33&&e[1]===249}),dt=(0,q.conditional)({image:[{code:(0,y.readByte)()},{descriptor:[{left:(0,y.readUnsigned)(!0)},{top:(0,y.readUnsigned)(!0)},{width:(0,y.readUnsigned)(!0)},{height:(0,y.readUnsigned)(!0)},{lct:(0,y.readBits)({exists:{index:0},interlaced:{index:1},sort:{index:2},future:{index:3,length:2},size:{index:5,length:3}})}]},(0,q.conditional)({lct:(0,y.readArray)(3,function(t,e,n){return Math.pow(2,n.descriptor.lct.size+1)})},function(t,e,n){return n.descriptor.lct.exists}),{data:[{minCodeSize:(0,y.readByte)()},H]}]},function(t){return(0,y.peekByte)()(t)===44}),pt=(0,q.conditional)({text:[{codes:(0,y.readBytes)(2)},{blockSize:(0,y.readByte)()},{preData:function(e,n,r){return(0,y.readBytes)(r.text.blockSize)(e)}},H]},function(t){var e=(0,y.peekBytes)(2)(t);return e[0]===33&&e[1]===1}),gt=(0,q.conditional)({application:[{codes:(0,y.readBytes)(2)},{blockSize:(0,y.readByte)()},{id:function(e,n,r){return(0,y.readString)(r.blockSize)(e)}},H]},function(t){var e=(0,y.peekBytes)(2)(t);return e[0]===33&&e[1]===255}),yt=(0,q.conditional)({comment:[{codes:(0,y.readBytes)(2)},H]},function(t){var e=(0,y.peekBytes)(2)(t);return e[0]===33&&e[1]===254}),vt=[{header:[{signature:(0,y.readString)(3)},{version:(0,y.readString)(3)}]},{lsd:[{width:(0,y.readUnsigned)(!0)},{height:(0,y.readUnsigned)(!0)},{gct:(0,y.readBits)({exists:{index:0},resolution:{index:1,length:3},sort:{index:4},size:{index:5,length:3}})},{backgroundColorIndex:(0,y.readByte)()},{pixelAspectRatio:(0,y.readByte)()}]},(0,q.conditional)({gct:(0,y.readArray)(3,function(t,e){return Math.pow(2,e.lsd.gct.size+1)})},function(t,e){return e.lsd.gct.exists}),{frames:(0,q.loop)([ft,gt,yt,dt,pt],function(t){var e=(0,y.peekByte)()(t);return e===33||e===44})}],ht=vt;N.default=ht});var _e=E(Z=>{"use strict";Object.defineProperty(Z,"__esModule",{value:!0});Z.deinterlace=void 0;var wt=function(e,n){for(var r=new Array(e.length),i=e.length/n,o=function(g,h){var d=e.slice(h*n,(h+1)*n);r.splice.apply(r,[g*n,n].concat(d))},c=[0,4,2,1],a=[8,8,4,2],f=0,u=0;u<4;u++)for(var l=c[u];l<i;l+=a[u])o(l,f),f++;return r};Z.deinterlace=wt});var Ae=E(K=>{"use strict";Object.defineProperty(K,"__esModule",{value:!0});K.lzw=void 0;var bt=function(e,n,r){var i=4096,o=-1,c=r,a,f,u,l,s,g,h,M,d,v,A,_,S,b,z,C,p=new Array(r),I=new Array(i),x=new Array(i),w=new Array(i+1);for(_=e,f=1<<_,s=f+1,a=f+2,h=o,l=_+1,u=(1<<l)-1,d=0;d<f;d++)I[d]=0,x[d]=d;var A,M,B,S,b,C,z;for(A=M=B=S=b=C=z=0,v=0;v<c;){if(b===0){if(M<l){A+=n[z]<<M,M+=8,z++;continue}if(d=A&u,A>>=l,M-=l,d>a||d==s)break;if(d==f){l=_+1,u=(1<<l)-1,a=f+2,h=o;continue}if(h==o){w[b++]=x[d],h=d,S=d;continue}for(g=d,d==a&&(w[b++]=S,d=h);d>f;)w[b++]=x[d],d=I[d];S=x[d]&255,w[b++]=S,a<i&&(I[a]=h,x[a]=S,a++,(a&u)===0&&a<i&&(l++,u+=a)),h=g}b--,p[C++]=w[b],v++}for(v=C;v<c;v++)p[v]=0;return p};K.lzw=bt});var Se=E(P=>{"use strict";Object.defineProperty(P,"__esModule",{value:!0});P.decompressFrames=P.decompressFrame=P.parseGIF=void 0;var xt=St(Be()),Bt=te(),_t=re(),At=_e(),kt=Ae();function St(t){return t&&t.__esModule?t:{default:t}}var mt=function(e){var n=new Uint8Array(e);return(0,Bt.parse)((0,_t.buildStream)(n),xt.default)};P.parseGIF=mt;var Mt=function(e){for(var n=e.pixels.length,r=new Uint8ClampedArray(n*4),i=0;i<n;i++){var o=i*4,c=e.pixels[i],a=e.colorTable[c]||[0,0,0];r[o]=a[0],r[o+1]=a[1],r[o+2]=a[2],r[o+3]=c!==e.transparentIndex?255:0}return r},ke=function(e,n,r){if(!e.image){console.warn("gif frame does not have associated image.");return}var i=e.image,o=i.descriptor.width*i.descriptor.height,c=(0,kt.lzw)(i.data.minCodeSize,i.data.blocks,o);i.descriptor.lct.interlaced&&(c=(0,At.deinterlace)(c,i.descriptor.width));var a={pixels:c,dims:{top:e.image.descriptor.top,left:e.image.descriptor.left,width:e.image.descriptor.width,height:e.image.descriptor.height}};return i.descriptor.lct&&i.descriptor.lct.exists?a.colorTable=i.lct:a.colorTable=n,e.gce&&(a.delay=(e.gce.delay||10)*10,a.disposalType=e.gce.extras.disposal,e.gce.extras.transparentColorGiven&&(a.transparentIndex=e.gce.transparentColorIndex)),r&&(a.patch=Mt(a)),a};P.decompressFrame=ke;var It=function(e,n){return e.frames.filter(function(r){return r.image}).map(function(r){return ke(r,e.gct,n)})};P.decompressFrames=It});var ne=ae(be()),me=ae(Se());var export_GIFEncoder=ne.GIFEncoder;var export_applyPalette=ne.applyPalette;var export_decompressFrames=me.decompressFrames;var export_parseGIF=me.parseGIF;var export_quantize=ne.quantize;export{export_GIFEncoder as GIFEncoder,export_applyPalette as applyPalette,export_decompressFrames as decompressFrames,export_parseGIF as parseGIF,export_quantize as quantize};
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+
+// node_modules/.pnpm/gifenc@1.0.3/node_modules/gifenc/dist/gifenc.js
+var require_gifenc = __commonJS({
+  "node_modules/.pnpm/gifenc@1.0.3/node_modules/gifenc/dist/gifenc.js"(exports) {
+    var __defProp2 = Object.defineProperty;
+    var __markAsModule = (target) => __defProp2(target, "__esModule", { value: true });
+    var __export = (target, all) => {
+      for (var name in all)
+        __defProp2(target, name, { get: all[name], enumerable: true });
+    };
+    __markAsModule(exports);
+    __export(exports, {
+      GIFEncoder: () => GIFEncoder2,
+      applyPalette: () => applyPalette2,
+      default: () => src_default,
+      nearestColor: () => nearestColor,
+      nearestColorIndex: () => nearestColorIndex,
+      nearestColorIndexWithDistance: () => nearestColorIndexWithDistance,
+      prequantize: () => prequantize,
+      quantize: () => quantize2,
+      snapColorsToPalette: () => snapColorsToPalette
+    });
+    var constants_default = {
+      signature: "GIF",
+      version: "89a",
+      trailer: 59,
+      extensionIntroducer: 33,
+      applicationExtensionLabel: 255,
+      graphicControlExtensionLabel: 249,
+      imageSeparator: 44,
+      signatureSize: 3,
+      versionSize: 3,
+      globalColorTableFlagMask: 128,
+      colorResolutionMask: 112,
+      sortFlagMask: 8,
+      globalColorTableSizeMask: 7,
+      applicationIdentifierSize: 8,
+      applicationAuthCodeSize: 3,
+      disposalMethodMask: 28,
+      userInputFlagMask: 2,
+      transparentColorFlagMask: 1,
+      localColorTableFlagMask: 128,
+      interlaceFlagMask: 64,
+      idSortFlagMask: 32,
+      localColorTableSizeMask: 7
+    };
+    function createStream(initialCapacity = 256) {
+      let cursor = 0;
+      let contents = new Uint8Array(initialCapacity);
+      return {
+        get buffer() {
+          return contents.buffer;
+        },
+        reset() {
+          cursor = 0;
+        },
+        bytesView() {
+          return contents.subarray(0, cursor);
+        },
+        bytes() {
+          return contents.slice(0, cursor);
+        },
+        writeByte(byte) {
+          expand(cursor + 1);
+          contents[cursor] = byte;
+          cursor++;
+        },
+        writeBytes(data, offset = 0, byteLength = data.length) {
+          expand(cursor + byteLength);
+          for (let i = 0; i < byteLength; i++) {
+            contents[cursor++] = data[i + offset];
+          }
+        },
+        writeBytesView(data, offset = 0, byteLength = data.byteLength) {
+          expand(cursor + byteLength);
+          contents.set(data.subarray(offset, offset + byteLength), cursor);
+          cursor += byteLength;
+        }
+      };
+      function expand(newCapacity) {
+        var prevCapacity = contents.length;
+        if (prevCapacity >= newCapacity)
+          return;
+        var CAPACITY_DOUBLING_MAX = 1024 * 1024;
+        newCapacity = Math.max(newCapacity, prevCapacity * (prevCapacity < CAPACITY_DOUBLING_MAX ? 2 : 1.125) >>> 0);
+        if (prevCapacity != 0)
+          newCapacity = Math.max(newCapacity, 256);
+        const oldContents = contents;
+        contents = new Uint8Array(newCapacity);
+        if (cursor > 0)
+          contents.set(oldContents.subarray(0, cursor), 0);
+      }
+    }
+    var BITS = 12;
+    var DEFAULT_HSIZE = 5003;
+    var MASKS = [
+      0,
+      1,
+      3,
+      7,
+      15,
+      31,
+      63,
+      127,
+      255,
+      511,
+      1023,
+      2047,
+      4095,
+      8191,
+      16383,
+      32767,
+      65535
+    ];
+    function lzwEncode(width, height, pixels, colorDepth, outStream = createStream(512), accum = new Uint8Array(256), htab = new Int32Array(DEFAULT_HSIZE), codetab = new Int32Array(DEFAULT_HSIZE)) {
+      const hsize = htab.length;
+      const initCodeSize = Math.max(2, colorDepth);
+      accum.fill(0);
+      codetab.fill(0);
+      htab.fill(-1);
+      let cur_accum = 0;
+      let cur_bits = 0;
+      const init_bits = initCodeSize + 1;
+      const g_init_bits = init_bits;
+      let clear_flg = false;
+      let n_bits = g_init_bits;
+      let maxcode = (1 << n_bits) - 1;
+      const ClearCode = 1 << init_bits - 1;
+      const EOFCode = ClearCode + 1;
+      let free_ent = ClearCode + 2;
+      let a_count = 0;
+      let ent = pixels[0];
+      let hshift = 0;
+      for (let fcode = hsize; fcode < 65536; fcode *= 2) {
+        ++hshift;
+      }
+      hshift = 8 - hshift;
+      outStream.writeByte(initCodeSize);
+      output(ClearCode);
+      const length = pixels.length;
+      for (let idx = 1; idx < length; idx++) {
+        next_block: {
+          const c = pixels[idx];
+          const fcode = (c << BITS) + ent;
+          let i = c << hshift ^ ent;
+          if (htab[i] === fcode) {
+            ent = codetab[i];
+            break next_block;
+          }
+          const disp = i === 0 ? 1 : hsize - i;
+          while (htab[i] >= 0) {
+            i -= disp;
+            if (i < 0)
+              i += hsize;
+            if (htab[i] === fcode) {
+              ent = codetab[i];
+              break next_block;
+            }
+          }
+          output(ent);
+          ent = c;
+          if (free_ent < 1 << BITS) {
+            codetab[i] = free_ent++;
+            htab[i] = fcode;
+          } else {
+            htab.fill(-1);
+            free_ent = ClearCode + 2;
+            clear_flg = true;
+            output(ClearCode);
+          }
+        }
+      }
+      output(ent);
+      output(EOFCode);
+      outStream.writeByte(0);
+      return outStream.bytesView();
+      function output(code) {
+        cur_accum &= MASKS[cur_bits];
+        if (cur_bits > 0)
+          cur_accum |= code << cur_bits;
+        else
+          cur_accum = code;
+        cur_bits += n_bits;
+        while (cur_bits >= 8) {
+          accum[a_count++] = cur_accum & 255;
+          if (a_count >= 254) {
+            outStream.writeByte(a_count);
+            outStream.writeBytesView(accum, 0, a_count);
+            a_count = 0;
+          }
+          cur_accum >>= 8;
+          cur_bits -= 8;
+        }
+        if (free_ent > maxcode || clear_flg) {
+          if (clear_flg) {
+            n_bits = g_init_bits;
+            maxcode = (1 << n_bits) - 1;
+            clear_flg = false;
+          } else {
+            ++n_bits;
+            maxcode = n_bits === BITS ? 1 << n_bits : (1 << n_bits) - 1;
+          }
+        }
+        if (code == EOFCode) {
+          while (cur_bits > 0) {
+            accum[a_count++] = cur_accum & 255;
+            if (a_count >= 254) {
+              outStream.writeByte(a_count);
+              outStream.writeBytesView(accum, 0, a_count);
+              a_count = 0;
+            }
+            cur_accum >>= 8;
+            cur_bits -= 8;
+          }
+          if (a_count > 0) {
+            outStream.writeByte(a_count);
+            outStream.writeBytesView(accum, 0, a_count);
+            a_count = 0;
+          }
+        }
+      }
+    }
+    var lzwEncode_default = lzwEncode;
+    function rgb888_to_rgb565(r, g, b) {
+      return r << 8 & 63488 | g << 2 & 992 | b >> 3;
+    }
+    function rgba8888_to_rgba4444(r, g, b, a) {
+      return r >> 4 | g & 240 | (b & 240) << 4 | (a & 240) << 8;
+    }
+    function rgb888_to_rgb444(r, g, b) {
+      return r >> 4 << 8 | g & 240 | b >> 4;
+    }
+    function clamp(value, min, max) {
+      return value < min ? min : value > max ? max : value;
+    }
+    function sqr(value) {
+      return value * value;
+    }
+    function find_nn(bins, idx, hasAlpha) {
+      var nn = 0;
+      var err = 1e100;
+      const bin1 = bins[idx];
+      const n1 = bin1.cnt;
+      const wa = bin1.ac;
+      const wr = bin1.rc;
+      const wg = bin1.gc;
+      const wb = bin1.bc;
+      for (var i = bin1.fw; i != 0; i = bins[i].fw) {
+        const bin = bins[i];
+        const n2 = bin.cnt;
+        const nerr2 = n1 * n2 / (n1 + n2);
+        if (nerr2 >= err)
+          continue;
+        var nerr = 0;
+        if (hasAlpha) {
+          nerr += nerr2 * sqr(bin.ac - wa);
+          if (nerr >= err)
+            continue;
+        }
+        nerr += nerr2 * sqr(bin.rc - wr);
+        if (nerr >= err)
+          continue;
+        nerr += nerr2 * sqr(bin.gc - wg);
+        if (nerr >= err)
+          continue;
+        nerr += nerr2 * sqr(bin.bc - wb);
+        if (nerr >= err)
+          continue;
+        err = nerr;
+        nn = i;
+      }
+      bin1.err = err;
+      bin1.nn = nn;
+    }
+    function create_bin() {
+      return {
+        ac: 0,
+        rc: 0,
+        gc: 0,
+        bc: 0,
+        cnt: 0,
+        nn: 0,
+        fw: 0,
+        bk: 0,
+        tm: 0,
+        mtm: 0,
+        err: 0
+      };
+    }
+    function create_bin_list(data, format) {
+      const bincount = format === "rgb444" ? 4096 : 65536;
+      const bins = new Array(bincount);
+      const size = data.length;
+      if (format === "rgba4444") {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const a = color >> 24 & 255;
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgba8888_to_rgba4444(r, g, b, a);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.ac += a;
+          bin.cnt++;
+        }
+      } else if (format === "rgb444") {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgb888_to_rgb444(r, g, b);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.cnt++;
+        }
+      } else {
+        for (let i = 0; i < size; ++i) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const index = rgb888_to_rgb565(r, g, b);
+          let bin = index in bins ? bins[index] : bins[index] = create_bin();
+          bin.rc += r;
+          bin.gc += g;
+          bin.bc += b;
+          bin.cnt++;
+        }
+      }
+      return bins;
+    }
+    function quantize2(rgba, maxColors, opts = {}) {
+      const {
+        format = "rgb565",
+        clearAlpha = true,
+        clearAlphaColor = 0,
+        clearAlphaThreshold = 0,
+        oneBitAlpha = false
+      } = opts;
+      if (!rgba || !rgba.buffer) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (!(rgba instanceof Uint8Array) && !(rgba instanceof Uint8ClampedArray)) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      const data = new Uint32Array(rgba.buffer);
+      let useSqrt = opts.useSqrt !== false;
+      const hasAlpha = format === "rgba4444";
+      const bins = create_bin_list(data, format);
+      const bincount = bins.length;
+      const bincountMinusOne = bincount - 1;
+      const heap = new Uint32Array(bincount + 1);
+      var maxbins = 0;
+      for (var i = 0; i < bincount; ++i) {
+        const bin = bins[i];
+        if (bin != null) {
+          var d = 1 / bin.cnt;
+          if (hasAlpha)
+            bin.ac *= d;
+          bin.rc *= d;
+          bin.gc *= d;
+          bin.bc *= d;
+          bins[maxbins++] = bin;
+        }
+      }
+      if (sqr(maxColors) / maxbins < 0.022) {
+        useSqrt = false;
+      }
+      var i = 0;
+      for (; i < maxbins - 1; ++i) {
+        bins[i].fw = i + 1;
+        bins[i + 1].bk = i;
+        if (useSqrt)
+          bins[i].cnt = Math.sqrt(bins[i].cnt);
+      }
+      if (useSqrt)
+        bins[i].cnt = Math.sqrt(bins[i].cnt);
+      var h, l, l2;
+      for (i = 0; i < maxbins; ++i) {
+        find_nn(bins, i, false);
+        var err = bins[i].err;
+        for (l = ++heap[0]; l > 1; l = l2) {
+          l2 = l >> 1;
+          if (bins[h = heap[l2]].err <= err)
+            break;
+          heap[l] = h;
+        }
+        heap[l] = i;
+      }
+      var extbins = maxbins - maxColors;
+      for (i = 0; i < extbins; ) {
+        var tb;
+        for (; ; ) {
+          var b1 = heap[1];
+          tb = bins[b1];
+          if (tb.tm >= tb.mtm && bins[tb.nn].mtm <= tb.tm)
+            break;
+          if (tb.mtm == bincountMinusOne)
+            b1 = heap[1] = heap[heap[0]--];
+          else {
+            find_nn(bins, b1, false);
+            tb.tm = i;
+          }
+          var err = bins[b1].err;
+          for (l = 1; (l2 = l + l) <= heap[0]; l = l2) {
+            if (l2 < heap[0] && bins[heap[l2]].err > bins[heap[l2 + 1]].err)
+              l2++;
+            if (err <= bins[h = heap[l2]].err)
+              break;
+            heap[l] = h;
+          }
+          heap[l] = b1;
+        }
+        var nb = bins[tb.nn];
+        var n1 = tb.cnt;
+        var n2 = nb.cnt;
+        var d = 1 / (n1 + n2);
+        if (hasAlpha)
+          tb.ac = d * (n1 * tb.ac + n2 * nb.ac);
+        tb.rc = d * (n1 * tb.rc + n2 * nb.rc);
+        tb.gc = d * (n1 * tb.gc + n2 * nb.gc);
+        tb.bc = d * (n1 * tb.bc + n2 * nb.bc);
+        tb.cnt += nb.cnt;
+        tb.mtm = ++i;
+        bins[nb.bk].fw = nb.fw;
+        bins[nb.fw].bk = nb.bk;
+        nb.mtm = bincountMinusOne;
+      }
+      let palette = [];
+      var k = 0;
+      for (i = 0; ; ++k) {
+        let r = clamp(Math.round(bins[i].rc), 0, 255);
+        let g = clamp(Math.round(bins[i].gc), 0, 255);
+        let b = clamp(Math.round(bins[i].bc), 0, 255);
+        let a = 255;
+        if (hasAlpha) {
+          a = clamp(Math.round(bins[i].ac), 0, 255);
+          if (oneBitAlpha) {
+            const threshold = typeof oneBitAlpha === "number" ? oneBitAlpha : 127;
+            a = a <= threshold ? 0 : 255;
+          }
+          if (clearAlpha && a <= clearAlphaThreshold) {
+            r = g = b = clearAlphaColor;
+            a = 0;
+          }
+        }
+        const color = hasAlpha ? [r, g, b, a] : [r, g, b];
+        const exists = existsInPalette(palette, color);
+        if (!exists)
+          palette.push(color);
+        if ((i = bins[i].fw) == 0)
+          break;
+      }
+      return palette;
+    }
+    function existsInPalette(palette, color) {
+      for (let i = 0; i < palette.length; i++) {
+        const p = palette[i];
+        let matchesRGB = p[0] === color[0] && p[1] === color[1] && p[2] === color[2];
+        let matchesAlpha = p.length >= 4 && color.length >= 4 ? p[3] === color[3] : true;
+        if (matchesRGB && matchesAlpha)
+          return true;
+      }
+      return false;
+    }
+    function euclideanDistanceSquared(a, b) {
+      var sum = 0;
+      var n;
+      for (n = 0; n < a.length; n++) {
+        const dx = a[n] - b[n];
+        sum += dx * dx;
+      }
+      return sum;
+    }
+    function roundStep(byte, step) {
+      return step > 1 ? Math.round(byte / step) * step : byte;
+    }
+    function prequantize(rgba, { roundRGB = 5, roundAlpha = 10, oneBitAlpha = null } = {}) {
+      const data = new Uint32Array(rgba.buffer);
+      for (let i = 0; i < data.length; i++) {
+        const color = data[i];
+        let a = color >> 24 & 255;
+        let b = color >> 16 & 255;
+        let g = color >> 8 & 255;
+        let r = color & 255;
+        a = roundStep(a, roundAlpha);
+        if (oneBitAlpha) {
+          const threshold = typeof oneBitAlpha === "number" ? oneBitAlpha : 127;
+          a = a <= threshold ? 0 : 255;
+        }
+        r = roundStep(r, roundRGB);
+        g = roundStep(g, roundRGB);
+        b = roundStep(b, roundRGB);
+        data[i] = a << 24 | b << 16 | g << 8 | r << 0;
+      }
+    }
+    function applyPalette2(rgba, palette, format = "rgb565") {
+      if (!rgba || !rgba.buffer) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (!(rgba instanceof Uint8Array) && !(rgba instanceof Uint8ClampedArray)) {
+        throw new Error("quantize() expected RGBA Uint8Array data");
+      }
+      if (palette.length > 256) {
+        throw new Error("applyPalette() only works with 256 colors or less");
+      }
+      const data = new Uint32Array(rgba.buffer);
+      const length = data.length;
+      const bincount = format === "rgb444" ? 4096 : 65536;
+      const index = new Uint8Array(length);
+      const cache = new Array(bincount);
+      const hasAlpha = format === "rgba4444";
+      if (format === "rgba4444") {
+        for (let i = 0; i < length; i++) {
+          const color = data[i];
+          const a = color >> 24 & 255;
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const key = rgba8888_to_rgba4444(r, g, b, a);
+          const idx = key in cache ? cache[key] : cache[key] = nearestColorIndexRGBA(r, g, b, a, palette);
+          index[i] = idx;
+        }
+      } else {
+        const rgb888_to_key = format === "rgb444" ? rgb888_to_rgb444 : rgb888_to_rgb565;
+        for (let i = 0; i < length; i++) {
+          const color = data[i];
+          const b = color >> 16 & 255;
+          const g = color >> 8 & 255;
+          const r = color & 255;
+          const key = rgb888_to_key(r, g, b);
+          const idx = key in cache ? cache[key] : cache[key] = nearestColorIndexRGB(r, g, b, palette);
+          index[i] = idx;
+        }
+      }
+      return index;
+    }
+    function nearestColorIndexRGBA(r, g, b, a, palette) {
+      let k = 0;
+      let mindist = 1e100;
+      for (let i = 0; i < palette.length; i++) {
+        const px2 = palette[i];
+        const a2 = px2[3];
+        let curdist = sqr2(a2 - a);
+        if (curdist > mindist)
+          continue;
+        const r2 = px2[0];
+        curdist += sqr2(r2 - r);
+        if (curdist > mindist)
+          continue;
+        const g2 = px2[1];
+        curdist += sqr2(g2 - g);
+        if (curdist > mindist)
+          continue;
+        const b2 = px2[2];
+        curdist += sqr2(b2 - b);
+        if (curdist > mindist)
+          continue;
+        mindist = curdist;
+        k = i;
+      }
+      return k;
+    }
+    function nearestColorIndexRGB(r, g, b, palette) {
+      let k = 0;
+      let mindist = 1e100;
+      for (let i = 0; i < palette.length; i++) {
+        const px2 = palette[i];
+        const r2 = px2[0];
+        let curdist = sqr2(r2 - r);
+        if (curdist > mindist)
+          continue;
+        const g2 = px2[1];
+        curdist += sqr2(g2 - g);
+        if (curdist > mindist)
+          continue;
+        const b2 = px2[2];
+        curdist += sqr2(b2 - b);
+        if (curdist > mindist)
+          continue;
+        mindist = curdist;
+        k = i;
+      }
+      return k;
+    }
+    function snapColorsToPalette(palette, knownColors, threshold = 5) {
+      if (!palette.length || !knownColors.length)
+        return;
+      const paletteRGB = palette.map((p) => p.slice(0, 3));
+      const thresholdSq = threshold * threshold;
+      const dim = palette[0].length;
+      for (let i = 0; i < knownColors.length; i++) {
+        let color = knownColors[i];
+        if (color.length < dim) {
+          color = [color[0], color[1], color[2], 255];
+        } else if (color.length > dim) {
+          color = color.slice(0, 3);
+        } else {
+          color = color.slice();
+        }
+        const r = nearestColorIndexWithDistance(paletteRGB, color.slice(0, 3), euclideanDistanceSquared);
+        const idx = r[0];
+        const distanceSq = r[1];
+        if (distanceSq > 0 && distanceSq <= thresholdSq) {
+          palette[idx] = color;
+        }
+      }
+    }
+    function sqr2(a) {
+      return a * a;
+    }
+    function nearestColorIndex(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      let minDist = Infinity;
+      let minDistIndex = -1;
+      for (let j = 0; j < colors.length; j++) {
+        const paletteColor = colors[j];
+        const dist = distanceFn(pixel, paletteColor);
+        if (dist < minDist) {
+          minDist = dist;
+          minDistIndex = j;
+        }
+      }
+      return minDistIndex;
+    }
+    function nearestColorIndexWithDistance(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      let minDist = Infinity;
+      let minDistIndex = -1;
+      for (let j = 0; j < colors.length; j++) {
+        const paletteColor = colors[j];
+        const dist = distanceFn(pixel, paletteColor);
+        if (dist < minDist) {
+          minDist = dist;
+          minDistIndex = j;
+        }
+      }
+      return [minDistIndex, minDist];
+    }
+    function nearestColor(colors, pixel, distanceFn = euclideanDistanceSquared) {
+      return colors[nearestColorIndex(colors, pixel, distanceFn)];
+    }
+    function GIFEncoder2(opt = {}) {
+      const { initialCapacity = 4096, auto = true } = opt;
+      const stream = createStream(initialCapacity);
+      const HSIZE = 5003;
+      const accum = new Uint8Array(256);
+      const htab = new Int32Array(HSIZE);
+      const codetab = new Int32Array(HSIZE);
+      let hasInit = false;
+      return {
+        reset() {
+          stream.reset();
+          hasInit = false;
+        },
+        finish() {
+          stream.writeByte(constants_default.trailer);
+        },
+        bytes() {
+          return stream.bytes();
+        },
+        bytesView() {
+          return stream.bytesView();
+        },
+        get buffer() {
+          return stream.buffer;
+        },
+        get stream() {
+          return stream;
+        },
+        writeHeader,
+        writeFrame(index, width, height, opts = {}) {
+          const {
+            transparent = false,
+            transparentIndex = 0,
+            delay = 0,
+            palette = null,
+            repeat = 0,
+            colorDepth = 8,
+            dispose = -1
+          } = opts;
+          let first = false;
+          if (auto) {
+            if (!hasInit) {
+              first = true;
+              writeHeader();
+              hasInit = true;
+            }
+          } else {
+            first = Boolean(opts.first);
+          }
+          width = Math.max(0, Math.floor(width));
+          height = Math.max(0, Math.floor(height));
+          if (first) {
+            if (!palette) {
+              throw new Error("First frame must include a { palette } option");
+            }
+            encodeLogicalScreenDescriptor(stream, width, height, palette, colorDepth);
+            encodeColorTable(stream, palette);
+            if (repeat >= 0) {
+              encodeNetscapeExt(stream, repeat);
+            }
+          }
+          const delayTime = Math.round(delay / 10);
+          encodeGraphicControlExt(stream, dispose, delayTime, transparent, transparentIndex);
+          const useLocalColorTable = Boolean(palette) && !first;
+          encodeImageDescriptor(stream, width, height, useLocalColorTable ? palette : null);
+          if (useLocalColorTable)
+            encodeColorTable(stream, palette);
+          encodePixels(stream, index, width, height, colorDepth, accum, htab, codetab);
+        }
+      };
+      function writeHeader() {
+        writeUTFBytes(stream, "GIF89a");
+      }
+    }
+    function encodeGraphicControlExt(stream, dispose, delay, transparent, transparentIndex) {
+      stream.writeByte(33);
+      stream.writeByte(249);
+      stream.writeByte(4);
+      if (transparentIndex < 0) {
+        transparentIndex = 0;
+        transparent = false;
+      }
+      var transp, disp;
+      if (!transparent) {
+        transp = 0;
+        disp = 0;
+      } else {
+        transp = 1;
+        disp = 2;
+      }
+      if (dispose >= 0) {
+        disp = dispose & 7;
+      }
+      disp <<= 2;
+      const userInput = 0;
+      stream.writeByte(0 | disp | userInput | transp);
+      writeUInt16(stream, delay);
+      stream.writeByte(transparentIndex || 0);
+      stream.writeByte(0);
+    }
+    function encodeLogicalScreenDescriptor(stream, width, height, palette, colorDepth = 8) {
+      const globalColorTableFlag = 1;
+      const sortFlag = 0;
+      const globalColorTableSize = colorTableSize(palette.length) - 1;
+      const fields = globalColorTableFlag << 7 | colorDepth - 1 << 4 | sortFlag << 3 | globalColorTableSize;
+      const backgroundColorIndex = 0;
+      const pixelAspectRatio = 0;
+      writeUInt16(stream, width);
+      writeUInt16(stream, height);
+      stream.writeBytes([fields, backgroundColorIndex, pixelAspectRatio]);
+    }
+    function encodeNetscapeExt(stream, repeat) {
+      stream.writeByte(33);
+      stream.writeByte(255);
+      stream.writeByte(11);
+      writeUTFBytes(stream, "NETSCAPE2.0");
+      stream.writeByte(3);
+      stream.writeByte(1);
+      writeUInt16(stream, repeat);
+      stream.writeByte(0);
+    }
+    function encodeColorTable(stream, palette) {
+      const colorTableLength = 1 << colorTableSize(palette.length);
+      for (let i = 0; i < colorTableLength; i++) {
+        let color = [0, 0, 0];
+        if (i < palette.length) {
+          color = palette[i];
+        }
+        stream.writeByte(color[0]);
+        stream.writeByte(color[1]);
+        stream.writeByte(color[2]);
+      }
+    }
+    function encodeImageDescriptor(stream, width, height, localPalette) {
+      stream.writeByte(44);
+      writeUInt16(stream, 0);
+      writeUInt16(stream, 0);
+      writeUInt16(stream, width);
+      writeUInt16(stream, height);
+      if (localPalette) {
+        const interlace = 0;
+        const sorted = 0;
+        const palSize = colorTableSize(localPalette.length) - 1;
+        stream.writeByte(128 | interlace | sorted | 0 | palSize);
+      } else {
+        stream.writeByte(0);
+      }
+    }
+    function encodePixels(stream, index, width, height, colorDepth = 8, accum, htab, codetab) {
+      lzwEncode_default(width, height, index, colorDepth, stream, accum, htab, codetab);
+    }
+    function writeUInt16(stream, short) {
+      stream.writeByte(short & 255);
+      stream.writeByte(short >> 8 & 255);
+    }
+    function writeUTFBytes(stream, text) {
+      for (var i = 0; i < text.length; i++) {
+        stream.writeByte(text.charCodeAt(i));
+      }
+    }
+    function colorTableSize(length) {
+      return Math.max(Math.ceil(Math.log2(length)), 1);
+    }
+    var src_default = GIFEncoder2;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/index.js
+var require_lib = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.loop = exports.conditional = exports.parse = void 0;
+    var parse = function parse2(stream, schema) {
+      var result = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
+      var parent = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : result;
+      if (Array.isArray(schema)) {
+        schema.forEach(function(partSchema) {
+          return parse2(stream, partSchema, result, parent);
+        });
+      } else if (typeof schema === "function") {
+        schema(stream, result, parent, parse2);
+      } else {
+        var key = Object.keys(schema)[0];
+        if (Array.isArray(schema[key])) {
+          parent[key] = {};
+          parse2(stream, schema[key], result, parent[key]);
+        } else {
+          parent[key] = schema[key](stream, result, parent, parse2);
+        }
+      }
+      return result;
+    };
+    exports.parse = parse;
+    var conditional = function conditional2(schema, conditionFunc) {
+      return function(stream, result, parent, parse2) {
+        if (conditionFunc(stream, result, parent)) {
+          parse2(stream, schema, result, parent);
+        }
+      };
+    };
+    exports.conditional = conditional;
+    var loop = function loop2(schema, continueFunc) {
+      return function(stream, result, parent, parse2) {
+        var arr = [];
+        var lastStreamPos = stream.pos;
+        while (continueFunc(stream, result, parent)) {
+          var newParent = {};
+          parse2(stream, schema, result, newParent);
+          if (stream.pos === lastStreamPos) {
+            break;
+          }
+          lastStreamPos = stream.pos;
+          arr.push(newParent);
+        }
+        return arr;
+      };
+    };
+    exports.loop = loop;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/parsers/uint8.js
+var require_uint8 = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/parsers/uint8.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.readBits = exports.readArray = exports.readUnsigned = exports.readString = exports.peekBytes = exports.readBytes = exports.peekByte = exports.readByte = exports.buildStream = void 0;
+    var buildStream = function buildStream2(uint8Data) {
+      return {
+        data: uint8Data,
+        pos: 0
+      };
+    };
+    exports.buildStream = buildStream;
+    var readByte = function readByte2() {
+      return function(stream) {
+        return stream.data[stream.pos++];
+      };
+    };
+    exports.readByte = readByte;
+    var peekByte = function peekByte2() {
+      var offset = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : 0;
+      return function(stream) {
+        return stream.data[stream.pos + offset];
+      };
+    };
+    exports.peekByte = peekByte;
+    var readBytes = function readBytes2(length) {
+      return function(stream) {
+        return stream.data.subarray(stream.pos, stream.pos += length);
+      };
+    };
+    exports.readBytes = readBytes;
+    var peekBytes = function peekBytes2(length) {
+      return function(stream) {
+        return stream.data.subarray(stream.pos, stream.pos + length);
+      };
+    };
+    exports.peekBytes = peekBytes;
+    var readString = function readString2(length) {
+      return function(stream) {
+        return Array.from(readBytes(length)(stream)).map(function(value) {
+          return String.fromCharCode(value);
+        }).join("");
+      };
+    };
+    exports.readString = readString;
+    var readUnsigned = function readUnsigned2(littleEndian) {
+      return function(stream) {
+        var bytes = readBytes(2)(stream);
+        return littleEndian ? (bytes[1] << 8) + bytes[0] : (bytes[0] << 8) + bytes[1];
+      };
+    };
+    exports.readUnsigned = readUnsigned;
+    var readArray = function readArray2(byteSize, totalOrFunc) {
+      return function(stream, result, parent) {
+        var total = typeof totalOrFunc === "function" ? totalOrFunc(stream, result, parent) : totalOrFunc;
+        var parser = readBytes(byteSize);
+        var arr = new Array(total);
+        for (var i = 0; i < total; i++) {
+          arr[i] = parser(stream);
+        }
+        return arr;
+      };
+    };
+    exports.readArray = readArray;
+    var subBitsTotal = function subBitsTotal2(bits, startIndex, length) {
+      var result = 0;
+      for (var i = 0; i < length; i++) {
+        result += bits[startIndex + i] && Math.pow(2, length - i - 1);
+      }
+      return result;
+    };
+    var readBits = function readBits2(schema) {
+      return function(stream) {
+        var _byte = readByte()(stream);
+        var bits = new Array(8);
+        for (var i = 0; i < 8; i++) {
+          bits[7 - i] = !!(_byte & 1 << i);
+        }
+        return Object.keys(schema).reduce(function(res, key) {
+          var def = schema[key];
+          if (def.length) {
+            res[key] = subBitsTotal(bits, def.index, def.length);
+          } else {
+            res[key] = bits[def.index];
+          }
+          return res;
+        }, {});
+      };
+    };
+    exports.readBits = readBits;
+  }
+});
+
+// node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/schemas/gif.js
+var require_gif = __commonJS({
+  "node_modules/.pnpm/js-binary-schema-parser@2.0.3/node_modules/js-binary-schema-parser/lib/schemas/gif.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports["default"] = void 0;
+    var _ = require_lib();
+    var _uint = require_uint8();
+    var subBlocksSchema = {
+      blocks: function blocks(stream) {
+        var terminator = 0;
+        var chunks = [];
+        var streamSize = stream.data.length;
+        var total = 0;
+        for (var size = (0, _uint.readByte)()(stream); size !== terminator; size = (0, _uint.readByte)()(stream)) {
+          if (!size) break;
+          if (stream.pos + size >= streamSize) {
+            var availableSize = streamSize - stream.pos;
+            chunks.push((0, _uint.readBytes)(availableSize)(stream));
+            total += availableSize;
+            break;
+          }
+          chunks.push((0, _uint.readBytes)(size)(stream));
+          total += size;
+        }
+        var result = new Uint8Array(total);
+        var offset = 0;
+        for (var i = 0; i < chunks.length; i++) {
+          result.set(chunks[i], offset);
+          offset += chunks[i].length;
+        }
+        return result;
+      }
+    };
+    var gceSchema = (0, _.conditional)({
+      gce: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        byteSize: (0, _uint.readByte)()
+      }, {
+        extras: (0, _uint.readBits)({
+          future: {
+            index: 0,
+            length: 3
+          },
+          disposal: {
+            index: 3,
+            length: 3
+          },
+          userInput: {
+            index: 6
+          },
+          transparentColorGiven: {
+            index: 7
+          }
+        })
+      }, {
+        delay: (0, _uint.readUnsigned)(true)
+      }, {
+        transparentColorIndex: (0, _uint.readByte)()
+      }, {
+        terminator: (0, _uint.readByte)()
+      }]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 249;
+    });
+    var imageSchema = (0, _.conditional)({
+      image: [{
+        code: (0, _uint.readByte)()
+      }, {
+        descriptor: [{
+          left: (0, _uint.readUnsigned)(true)
+        }, {
+          top: (0, _uint.readUnsigned)(true)
+        }, {
+          width: (0, _uint.readUnsigned)(true)
+        }, {
+          height: (0, _uint.readUnsigned)(true)
+        }, {
+          lct: (0, _uint.readBits)({
+            exists: {
+              index: 0
+            },
+            interlaced: {
+              index: 1
+            },
+            sort: {
+              index: 2
+            },
+            future: {
+              index: 3,
+              length: 2
+            },
+            size: {
+              index: 5,
+              length: 3
+            }
+          })
+        }]
+      }, (0, _.conditional)({
+        lct: (0, _uint.readArray)(3, function(stream, result, parent) {
+          return Math.pow(2, parent.descriptor.lct.size + 1);
+        })
+      }, function(stream, result, parent) {
+        return parent.descriptor.lct.exists;
+      }), {
+        data: [{
+          minCodeSize: (0, _uint.readByte)()
+        }, subBlocksSchema]
+      }]
+    }, function(stream) {
+      return (0, _uint.peekByte)()(stream) === 44;
+    });
+    var textSchema = (0, _.conditional)({
+      text: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        blockSize: (0, _uint.readByte)()
+      }, {
+        preData: function preData(stream, result, parent) {
+          return (0, _uint.readBytes)(parent.text.blockSize)(stream);
+        }
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 1;
+    });
+    var applicationSchema = (0, _.conditional)({
+      application: [{
+        codes: (0, _uint.readBytes)(2)
+      }, {
+        blockSize: (0, _uint.readByte)()
+      }, {
+        id: function id(stream, result, parent) {
+          return (0, _uint.readString)(parent.blockSize)(stream);
+        }
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 255;
+    });
+    var commentSchema = (0, _.conditional)({
+      comment: [{
+        codes: (0, _uint.readBytes)(2)
+      }, subBlocksSchema]
+    }, function(stream) {
+      var codes = (0, _uint.peekBytes)(2)(stream);
+      return codes[0] === 33 && codes[1] === 254;
+    });
+    var schema = [
+      {
+        header: [{
+          signature: (0, _uint.readString)(3)
+        }, {
+          version: (0, _uint.readString)(3)
+        }]
+      },
+      {
+        lsd: [{
+          width: (0, _uint.readUnsigned)(true)
+        }, {
+          height: (0, _uint.readUnsigned)(true)
+        }, {
+          gct: (0, _uint.readBits)({
+            exists: {
+              index: 0
+            },
+            resolution: {
+              index: 1,
+              length: 3
+            },
+            sort: {
+              index: 4
+            },
+            size: {
+              index: 5,
+              length: 3
+            }
+          })
+        }, {
+          backgroundColorIndex: (0, _uint.readByte)()
+        }, {
+          pixelAspectRatio: (0, _uint.readByte)()
+        }]
+      },
+      (0, _.conditional)({
+        gct: (0, _uint.readArray)(3, function(stream, result) {
+          return Math.pow(2, result.lsd.gct.size + 1);
+        })
+      }, function(stream, result) {
+        return result.lsd.gct.exists;
+      }),
+      // content frames
+      {
+        frames: (0, _.loop)([gceSchema, applicationSchema, commentSchema, imageSchema, textSchema], function(stream) {
+          var nextCode = (0, _uint.peekByte)()(stream);
+          return nextCode === 33 || nextCode === 44;
+        })
+      }
+    ];
+    var _default = schema;
+    exports["default"] = _default;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/deinterlace.js
+var require_deinterlace = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/deinterlace.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.deinterlace = void 0;
+    var deinterlace = function deinterlace2(pixels, width) {
+      var newPixels = new Array(pixels.length);
+      var rows = pixels.length / width;
+      var cpRow = function cpRow2(toRow2, fromRow2) {
+        var fromPixels = pixels.slice(fromRow2 * width, (fromRow2 + 1) * width);
+        newPixels.splice.apply(newPixels, [toRow2 * width, width].concat(fromPixels));
+      };
+      var offsets = [0, 4, 2, 1];
+      var steps = [8, 8, 4, 2];
+      var fromRow = 0;
+      for (var pass = 0; pass < 4; pass++) {
+        for (var toRow = offsets[pass]; toRow < rows; toRow += steps[pass]) {
+          cpRow(toRow, fromRow);
+          fromRow++;
+        }
+      }
+      return newPixels;
+    };
+    exports.deinterlace = deinterlace;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/lzw.js
+var require_lzw = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/lzw.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.lzw = void 0;
+    var lzw = function lzw2(minCodeSize, data, pixelCount) {
+      var MAX_STACK_SIZE = 4096;
+      var nullCode = -1;
+      var npix = pixelCount;
+      var available, clear, code_mask, code_size, end_of_information, in_code, old_code, bits, code, i, datum, data_size, first, top, bi, pi;
+      var dstPixels = new Array(pixelCount);
+      var prefix = new Array(MAX_STACK_SIZE);
+      var suffix = new Array(MAX_STACK_SIZE);
+      var pixelStack = new Array(MAX_STACK_SIZE + 1);
+      data_size = minCodeSize;
+      clear = 1 << data_size;
+      end_of_information = clear + 1;
+      available = clear + 2;
+      old_code = nullCode;
+      code_size = data_size + 1;
+      code_mask = (1 << code_size) - 1;
+      for (code = 0; code < clear; code++) {
+        prefix[code] = 0;
+        suffix[code] = code;
+      }
+      var datum, bits, count, first, top, pi, bi;
+      datum = bits = count = first = top = pi = bi = 0;
+      for (i = 0; i < npix; ) {
+        if (top === 0) {
+          if (bits < code_size) {
+            datum += data[bi] << bits;
+            bits += 8;
+            bi++;
+            continue;
+          }
+          code = datum & code_mask;
+          datum >>= code_size;
+          bits -= code_size;
+          if (code > available || code == end_of_information) {
+            break;
+          }
+          if (code == clear) {
+            code_size = data_size + 1;
+            code_mask = (1 << code_size) - 1;
+            available = clear + 2;
+            old_code = nullCode;
+            continue;
+          }
+          if (old_code == nullCode) {
+            pixelStack[top++] = suffix[code];
+            old_code = code;
+            first = code;
+            continue;
+          }
+          in_code = code;
+          if (code == available) {
+            pixelStack[top++] = first;
+            code = old_code;
+          }
+          while (code > clear) {
+            pixelStack[top++] = suffix[code];
+            code = prefix[code];
+          }
+          first = suffix[code] & 255;
+          pixelStack[top++] = first;
+          if (available < MAX_STACK_SIZE) {
+            prefix[available] = old_code;
+            suffix[available] = first;
+            available++;
+            if ((available & code_mask) === 0 && available < MAX_STACK_SIZE) {
+              code_size++;
+              code_mask += available;
+            }
+          }
+          old_code = in_code;
+        }
+        top--;
+        dstPixels[pi++] = pixelStack[top];
+        i++;
+      }
+      for (i = pi; i < npix; i++) {
+        dstPixels[i] = 0;
+      }
+      return dstPixels;
+    };
+    exports.lzw = lzw;
+  }
+});
+
+// node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/index.js
+var require_lib2 = __commonJS({
+  "node_modules/.pnpm/gifuct-js@2.1.2/node_modules/gifuct-js/lib/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    });
+    exports.decompressFrames = exports.decompressFrame = exports.parseGIF = void 0;
+    var _gif = _interopRequireDefault(require_gif());
+    var _jsBinarySchemaParser = require_lib();
+    var _uint = require_uint8();
+    var _deinterlace = require_deinterlace();
+    var _lzw = require_lzw();
+    function _interopRequireDefault(obj) {
+      return obj && obj.__esModule ? obj : { "default": obj };
+    }
+    var parseGIF2 = function parseGIF3(arrayBuffer) {
+      var byteData = new Uint8Array(arrayBuffer);
+      return (0, _jsBinarySchemaParser.parse)((0, _uint.buildStream)(byteData), _gif["default"]);
+    };
+    exports.parseGIF = parseGIF2;
+    var generatePatch = function generatePatch2(image) {
+      var totalPixels = image.pixels.length;
+      var patchData = new Uint8ClampedArray(totalPixels * 4);
+      for (var i = 0; i < totalPixels; i++) {
+        var pos = i * 4;
+        var colorIndex = image.pixels[i];
+        var color = image.colorTable[colorIndex] || [0, 0, 0];
+        patchData[pos] = color[0];
+        patchData[pos + 1] = color[1];
+        patchData[pos + 2] = color[2];
+        patchData[pos + 3] = colorIndex !== image.transparentIndex ? 255 : 0;
+      }
+      return patchData;
+    };
+    var decompressFrame = function decompressFrame2(frame, gct, buildImagePatch) {
+      if (!frame.image) {
+        console.warn("gif frame does not have associated image.");
+        return;
+      }
+      var image = frame.image;
+      var totalPixels = image.descriptor.width * image.descriptor.height;
+      var pixels = (0, _lzw.lzw)(image.data.minCodeSize, image.data.blocks, totalPixels);
+      if (image.descriptor.lct.interlaced) {
+        pixels = (0, _deinterlace.deinterlace)(pixels, image.descriptor.width);
+      }
+      var resultImage = {
+        pixels,
+        dims: {
+          top: frame.image.descriptor.top,
+          left: frame.image.descriptor.left,
+          width: frame.image.descriptor.width,
+          height: frame.image.descriptor.height
+        }
+      };
+      if (image.descriptor.lct && image.descriptor.lct.exists) {
+        resultImage.colorTable = image.lct;
+      } else {
+        resultImage.colorTable = gct;
+      }
+      if (frame.gce) {
+        resultImage.delay = (frame.gce.delay || 10) * 10;
+        resultImage.disposalType = frame.gce.extras.disposal;
+        if (frame.gce.extras.transparentColorGiven) {
+          resultImage.transparentIndex = frame.gce.transparentColorIndex;
+        }
+      }
+      if (buildImagePatch) {
+        resultImage.patch = generatePatch(resultImage);
+      }
+      return resultImage;
+    };
+    exports.decompressFrame = decompressFrame;
+    var decompressFrames2 = function decompressFrames3(parsedGif, buildImagePatches) {
+      return parsedGif.frames.filter(function(f) {
+        return f.image;
+      }).map(function(f) {
+        return decompressFrame(f, parsedGif.gct, buildImagePatches);
+      });
+    };
+    exports.decompressFrames = decompressFrames2;
+  }
+});
+
+// scripts/gif-vendor.js
+var import_gifenc = __toESM(require_gifenc());
+var import_gifuct_js = __toESM(require_lib2());
+var export_GIFEncoder = import_gifenc.GIFEncoder;
+var export_applyPalette = import_gifenc.applyPalette;
+var export_decompressFrames = import_gifuct_js.decompressFrames;
+var export_parseGIF = import_gifuct_js.parseGIF;
+var export_quantize = import_gifenc.quantize;
+export {
+  export_GIFEncoder as GIFEncoder,
+  export_applyPalette as applyPalette,
+  export_decompressFrames as decompressFrames,
+  export_parseGIF as parseGIF,
+  export_quantize as quantize
+};

@@ -33,6 +33,8 @@ class PackageTests(unittest.TestCase):
                 self.assertIn("src/main.js", names)
                 self.assertIn("assets/icons/icon-128.png", names)
                 self.assertIn("vendor/pdfjs/pdf.worker.mjs", names)
+                self.assertIn("vendor/pdf-lib/pdf-lib.js", names)
+                self.assertNotIn("vendor/pdf-lib/pdf-lib.min.js", names)
                 self.assertIn("vendor/generated/media-vendor.js", names)
                 self.assertIn("vendor/generated/gif-vendor.js", names)
                 self.assertIn("vendor/generated/tiff-vendor.js", names)
@@ -72,7 +74,7 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["data_collection_permissions"]["required"], ["none"])
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@jmakau.de")
                 self.assertEqual(manifest["permissions"], ["activeTab", "scripting"])
-                self.assertEqual(manifest["version"], "0.2.8")
+                self.assertEqual(manifest["version"], "0.2.9")
 
     def test_amo_source_package_is_repeatable_and_excludes_built_vendor_files(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -85,12 +87,14 @@ class PackageTests(unittest.TestCase):
                 names = set(archive.namelist())
                 self.assertEqual(archive.testzip(), None)
                 self.assertIn("AMO_REVIEW.md", names)
+                self.assertIn("PROJECT_README.md", names)
                 self.assertIn("package.json", names)
                 self.assertIn("pnpm-lock.yaml", names)
                 self.assertIn("scripts/build-vendor.mjs", names)
                 self.assertIn("scripts/package_extension.py", names)
                 self.assertIn("src/main.js", names)
                 self.assertIn("tests/test_package.py", names)
+                self.assertEqual(archive.read("README.md"), (ROOT / "AMO_REVIEW.md").read_bytes())
                 self.assertFalse(any(name.startswith(("assets/icon-concepts/", "vendor/", "dist/", "node_modules/")) for name in names))
 
 

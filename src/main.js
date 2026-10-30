@@ -17,7 +17,7 @@ function ensurePdfLib() {
   if (globalThis.PDFLib) return Promise.resolve();
   pdfLibPromise ??= new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = new URL('../vendor/pdf-lib/pdf-lib.min.js', import.meta.url).href;
+    script.src = new URL('../vendor/pdf-lib/pdf-lib.js', import.meta.url).href;
     script.onload = () => globalThis.PDFLib ? resolve() : reject(new Error(t('pdfReadError')));
     script.onerror = () => reject(new Error(t('pdfReadError')));
     document.head.append(script);

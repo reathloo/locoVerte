@@ -10,7 +10,7 @@ await build({
   format: 'esm',
   platform: 'browser',
   target: 'es2022',
-  minify: true,
+  minify: false,
   sourcemap: false,
   legalComments: 'external',
 });
@@ -33,7 +33,7 @@ const generatedLicenses = [
 ].map(([name, filename]) => copyFile(`node_modules/${name}/LICENSE`, `vendor/generated/${filename}`));
 
 await Promise.all([
-  copyFile('node_modules/pdf-lib/dist/pdf-lib.min.js', 'vendor/pdf-lib/pdf-lib.min.js'),
+  copyFile('node_modules/pdf-lib/dist/pdf-lib.js', 'vendor/pdf-lib/pdf-lib.js'),
   copyFile('node_modules/pdf-lib/LICENSE.md', 'vendor/pdf-lib/LICENSE.md'),
   copyFile('node_modules/pdfjs-dist/build/pdf.mjs', 'vendor/pdfjs/pdf.mjs'),
   copyFile('node_modules/pdfjs-dist/build/pdf.worker.mjs', 'vendor/pdfjs/pdf.worker.mjs'),

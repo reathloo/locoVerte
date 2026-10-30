@@ -4,9 +4,9 @@ The source stays offline-first. A Git push, an unsigned ZIP, a signed Firefox XP
 
 ## Package and checks
 
-1. Increase `manifest.json` version for each submitted update. The current release is **0.2.8**.
+1. Increase `manifest.json` version for each submitted update. The current release candidate is **0.2.9**.
 2. Run `pnpm install --frozen-lockfile`, `pnpm run build:vendor`, `python3 -m unittest discover -s tests -p 'test_*.py'`, `pnpm run test:local`, `pnpm run package:extension`, and `pnpm run package:source`.
-3. Unpack `dist/locoverte-0.2.8.zip` into a temporary directory and run `pnpm exec web-ext lint --source-dir <directory>`. Lint the package, not the repository, so development scripts are excluded.
+3. Unpack `dist/locoverte-0.2.9.zip` into a temporary directory and run `pnpm exec web-ext lint --source-dir <directory>`. Lint the package, not the repository, so development scripts are excluded.
 4. Run the browser regression page with fresh local fixtures; test an installed extension in each target browser. Check a disconnected/offline run, downloads, the optional upload-field action, clipboard paste, PDF page tools, dark/light mode, and large/corrupt inputs. Record browser versions and pass/fail results before submission.
 5. Review `AMO_REVIEW.md`, `PRIVACY.md`, permissions, `LICENSE`, `THIRD_PARTY_NOTICES.md`, bundled library licenses, store screenshots, and the public privacy-policy URL. The public GitHub copy of `PRIVACY.md` can be linked, but store-specific requirements still need review.
 
@@ -14,14 +14,14 @@ The source stays offline-first. A Git push, an unsigned ZIP, a signed Firefox XP
 
 | Browser | Artifact and submission | Remaining gate |
 | --- | --- | --- |
-| Chrome | `dist/locoverte-0.2.8.zip` to Chrome Web Store | Installed-extension smoke test, store account, listing, privacy disclosures, review |
+| Chrome | `dist/locoverte-0.2.9.zip` to Chrome Web Store | Installed-extension smoke test, store account, listing, privacy disclosures, review |
 | Edge | Same ZIP to Microsoft Edge Add-ons | Installed-extension smoke test, Partner Center, listing, review |
 | Firefox Desktop | Extension ZIP and matching source ZIP to addons.mozilla.org; AMO signs the extension | Installed-extension smoke test, AMO account, listing assets, signing/review. The stable Gecko ID and `none` data-collection declaration are in the manifest. |
 | Safari macOS | Use the ZIP with Apple’s Safari Web Extension Packager, then build the containing macOS app | Full Xcode or App Store Connect packager, Apple developer identity, app icon/signing, Safari smoke test, review |
 
 The packaged Firefox lint currently reports zero errors and five warnings originating in bundled PDF.js code (`Function` constructor and dynamic imports). Before submitting, review these warnings against the exact bundled PDF.js version and be ready to explain them to AMO. Do not silently suppress them.
 
-`dist/locoverte-0.2.8-source.zip` contains the human-readable project source, tests, locked dependencies, build scripts, and `AMO_REVIEW.md`. Built vendor files are deliberately excluded and reproduced from the locked official npm packages during the documented build.
+`dist/locoverte-0.2.9-source.zip` contains the human-readable project source, tests, locked dependencies, build scripts, and `AMO_REVIEW.md`. Built vendor files are deliberately excluded and reproduced from the locked official npm packages during the documented build.
 
 Safari is **not** a ZIP-only install. With full Xcode on macOS, Apple documents `xcrun safari-web-extension-packager /path/to/unpacked-extension --macos-only --swift --copy-resources --no-open` as the packaging route. Choose the final app name and bundle identifier in the packager and inspect its warnings. On this development host, only Apple Command Line Tools are active; the Safari packager and `xcodebuild` are unavailable. App Store Connect’s web packager is another route if the developer account supports it. Neither route has been validated here.
 

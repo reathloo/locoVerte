@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync, deflateRawSync } from 'node:zlib';
-import pdfLib from '../vendor/pdf-lib/pdf-lib.min.js';
+import pdfLib from '../vendor/pdf-lib/pdf-lib.js';
 import UTIF from 'utif';
 
 const directory = process.argv[2] ? join(process.cwd(), process.argv[2]) : await mkdtemp(join(tmpdir(), 'locoverte-tests-'));
