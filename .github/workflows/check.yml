@@ -32,11 +32,13 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_*.py'
           pnpm test:local
-      - name: Build store package
-        run: python scripts/package_extension.py
+      - name: Build release packages
+        run: |
+          python scripts/package_extension.py
+          python scripts/package_source.py
       - name: Lint packaged Firefox extension
         run: |
-          archive=$(find dist -maxdepth 1 -name 'locoverte-*.zip' -print -quit)
+          archive=$(find dist -maxdepth 1 -name 'locoverte-*.zip' ! -name '*-source.zip' -print -quit)
           test -n "$archive"
           mkdir -p dist/firefox-lint
           python -m zipfile -e "$archive" dist/firefox-lint

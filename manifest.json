@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "default_locale": "en",
   "name": "__MSG_extensionName__",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "__MSG_extensionDescription__",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -23,7 +23,7 @@
   "permissions": ["activeTab", "scripting"],
   "browser_specific_settings": {
     "gecko": {
-      "id": "locoverte@reathloo.dev",
+      "id": "locoverte@jmakau.de",
       "data_collection_permissions": { "required": ["none"] }
     }
   },

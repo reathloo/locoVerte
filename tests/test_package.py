@@ -9,6 +9,7 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGER = ROOT / "scripts" / "package_extension.py"
+SOURCE_PACKAGER = ROOT / "scripts" / "package_source.py"
 
 
 class PackageTests(unittest.TestCase):
@@ -69,9 +70,28 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(archive.read("THIRD_PARTY_NOTICES.md"), (ROOT / "THIRD_PARTY_NOTICES.md").read_bytes())
                 manifest = json.loads(archive.read("manifest.json"))
                 self.assertEqual(manifest["browser_specific_settings"]["gecko"]["data_collection_permissions"]["required"], ["none"])
-                self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@reathloo.dev")
+                self.assertEqual(manifest["browser_specific_settings"]["gecko"]["id"], "locoverte@jmakau.de")
                 self.assertEqual(manifest["permissions"], ["activeTab", "scripting"])
-                self.assertEqual(manifest["version"], "0.2.7")
+                self.assertEqual(manifest["version"], "0.2.8")
+
+    def test_amo_source_package_is_repeatable_and_excludes_built_vendor_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "first-source.zip"
+            second = Path(directory) / "second-source.zip"
+            for output in (first, second):
+                subprocess.run([sys.executable, str(SOURCE_PACKAGER), "--output", str(output)], cwd=ROOT, check=True, capture_output=True)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            with ZipFile(first) as archive:
+                names = set(archive.namelist())
+                self.assertEqual(archive.testzip(), None)
+                self.assertIn("AMO_REVIEW.md", names)
+                self.assertIn("package.json", names)
+                self.assertIn("pnpm-lock.yaml", names)
+                self.assertIn("scripts/build-vendor.mjs", names)
+                self.assertIn("scripts/package_extension.py", names)
+                self.assertIn("src/main.js", names)
+                self.assertIn("tests/test_package.py", names)
+                self.assertFalse(any(name.startswith(("assets/icon-concepts/", "vendor/", "dist/", "node_modules/")) for name in names))
 
 
 if __name__ == "__main__":

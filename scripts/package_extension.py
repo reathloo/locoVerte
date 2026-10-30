@@ -43,11 +43,20 @@ TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 
 def package_paths():
-    tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).split(b"\0")
+    try:
+        tracked = subprocess.check_output(
+            ["git", "ls-files", "-z"], cwd=ROOT, stderr=subprocess.DEVNULL
+        ).split(b"\0")
+        candidates = (Path(raw.decode()).as_posix() for raw in tracked if raw)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        candidates = (
+            path.relative_to(ROOT).as_posix()
+            for path in ROOT.rglob("*")
+            if path.is_file()
+        )
     paths = sorted(set(
-        Path(raw.decode()).as_posix()
-        for raw in tracked
-        if raw and (raw.decode() in ROOT_FILES or raw.decode().startswith(DIRECTORIES))
+        name for name in candidates
+        if name in ROOT_FILES or name.startswith(DIRECTORIES)
     ) | REQUIRED_BUNDLES)
     missing = ROOT_FILES - set(paths)
     if missing:
