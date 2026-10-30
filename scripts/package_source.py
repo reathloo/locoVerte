@@ -14,9 +14,7 @@ TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 
 def source_paths():
-    project_files = subprocess.check_output(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=ROOT
-    ).split(b"\0")
+    project_files = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).split(b"\0")
     paths = sorted(
         Path(raw.decode()).as_posix()
         for raw in project_files
