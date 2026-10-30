@@ -1,11 +1,11 @@
 {
   "name": "locoverte",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "license": "GPL-3.0-only",
   "scripts": {
     "build:vendor": "node scripts/build-vendor.mjs",
-    "test:local": "node --test tests/metadata.test.mjs tests/privacy-inspection.test.mjs tests/media-metadata.test.mjs tests/office-cleanup.test.mjs tests/pdf-pages.test.mjs tests/lazy-vendors.test.mjs tests/zip-stream.test.mjs tests/batch-ui.test.mjs"
+    "test:local": "node --test tests/metadata.test.mjs tests/privacy-inspection.test.mjs tests/media-metadata.test.mjs tests/office-cleanup.test.mjs tests/pdf-pages.test.mjs tests/lazy-vendors.test.mjs tests/zip-stream.test.mjs tests/batch-ui.test.mjs tests/launcher.test.mjs"
   },
   "dependencies": {
     "@mediabunny/mp3-encoder": "^1.24.0",
