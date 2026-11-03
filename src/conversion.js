@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { loadPdfJs } from './pdfjs-loader.js';
+import { loadPdfJs, pdfDocumentOptions } from './pdfjs-loader.js';
 import { MAX_PDF_PAGES, MAX_PDF_OUTPUT_SIZE, MAX_STRUCTURAL_PDF_SIZE, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE } from './limits.js';
 
 export { MAX_FILE_SIZE } from './limits.js';
@@ -49,9 +49,8 @@ async function encodeCanvas(canvas, type, quality) {
   }, type, quality));
 }
 
-export async function compressImage(file, outputType, value, signal, options = {}) {
+async function compressBitmap(bitmap, outputType, value, signal, options = {}) {
   signal.throwIfAborted();
-  const bitmap = await imageBitmap(file);
   const canvas = document.createElement('canvas');
   try {
     signal.throwIfAborted();
@@ -97,21 +96,34 @@ export async function compressImage(file, outputType, value, signal, options = {
     signal.throwIfAborted();
     return { blob, sourceWidth, sourceHeight, width: canvas.width, height: canvas.height };
   } finally {
-    bitmap.close();
     canvas.width = canvas.height = 0;
+  }
+}
+
+export async function compressImage(file, outputType, value, signal, options = {}) {
+  const bitmap = await imageBitmap(file);
+  try {
+    return await compressBitmap(bitmap, outputType, value, signal, options);
+  } finally {
+    bitmap.close();
   }
 }
 
 export async function compressImageToTarget(file, outputType, targetBytes, signal, options = {}) {
   const attempts = [80, 65, 50, 35, 20, 10];
-  let best;
-  for (const value of attempts) {
-    signal.throwIfAborted();
-    const candidate = await compressImage(file, outputType, value, signal, options);
-    if (!best || candidate.blob.size < best.blob.size) best = candidate;
-    if (candidate.blob.size <= targetBytes) return { ...candidate, targetMet: true };
+  const bitmap = await imageBitmap(file);
+  try {
+    let best;
+    for (const value of attempts) {
+      signal.throwIfAborted();
+      const candidate = await compressBitmap(bitmap, outputType, value, signal, options);
+      if (!best || candidate.blob.size < best.blob.size) best = candidate;
+      if (candidate.blob.size <= targetBytes) return { ...candidate, targetMet: true };
+    }
+    return { ...best, targetMet: false };
+  } finally {
+    bitmap.close();
   }
-  return { ...best, targetMet: false };
 }
 
 async function withPdf(file, signal, run) {
@@ -119,16 +131,9 @@ async function withPdf(file, signal, run) {
   const pdfjs = await loadPdfJs();
   const data = new Uint8Array(await file.arrayBuffer());
   signal.throwIfAborted();
-  const task = pdfjs.getDocument({
-    data,
-    cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,
-    cMapPacked: true,
-    standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href,
-    wasmUrl: new URL('../vendor/pdfjs/wasm/', import.meta.url).href,
-    iccUrl: new URL('../vendor/pdfjs/iccs/', import.meta.url).href,
+  const task = pdfjs.getDocument(pdfDocumentOptions(data, {
     stopAtErrors: true,
-    isEvalSupported: false,
-  });
+  }));
   let cleanup;
   const destroy = () => (cleanup ??= task.destroy());
   const abort = () => { destroy().catch(() => {}); };
@@ -197,11 +202,13 @@ async function rasterizePdf(source, profile, signal, onProgress = () => {}, page
 }
 
 export function estimatePdf(file, value, signal) {
+  if (value >= 70) {
+    return optimizePdfStructure(file, signal).then(async (optimized) => {
+      const pages = optimized.pages ?? await withPdf(file, signal, (pdf) => pdf.numPages);
+      return { size: optimized.blob.size, pages, structural: true };
+    });
+  }
   return withPdf(file, signal, async (pdf) => {
-    if (value >= 70) {
-      const optimized = await optimizePdfStructure(file, signal);
-      return { size: optimized.blob.size, pages: pdf.numPages, structural: true };
-    }
     const sample = await rasterizePdf(pdf, profiles(value)[0], signal, undefined, 1);
     return { size: sample.size * pdf.numPages, pages: pdf.numPages };
   });
@@ -227,10 +234,10 @@ export async function optimizePdfStructure(file, signal) {
     const pageCount = document.getPageCount();
     const saved = await document.save({ useObjectStreams: true, addDefaultPage: false, updateFieldAppearances: false });
     signal.throwIfAborted();
-    if (saved.length >= file.size) return { blob: file, reason: 'pdfNoStructuralSaving' };
+    if (saved.length >= file.size) return { blob: file, reason: 'pdfNoStructuralSaving', pages: pageCount };
     const check = await PDFLib.PDFDocument.load(saved, { updateMetadata: false });
-    if (check.getPageCount() !== pageCount) return { blob: file, reason: 'pdfComplexKept' };
-    return { blob: new Blob([saved], { type: 'application/pdf' }), structural: true };
+    if (check.getPageCount() !== pageCount) return { blob: file, reason: 'pdfComplexKept', pages: pageCount };
+    return { blob: new Blob([saved], { type: 'application/pdf' }), structural: true, pages: pageCount };
   } catch {
     signal.throwIfAborted();
     return { blob: file, reason: 'pdfComplexKept' };
@@ -238,8 +245,10 @@ export async function optimizePdfStructure(file, signal) {
 }
 
 export function compressPdf(file, value, targetBytes, signal, onProgress) {
+  if (value >= 70) {
+    return optimizePdfStructure(file, signal).then((optimized) => ({ ...optimized, reducedFurther: false }));
+  }
   return withPdf(file, signal, async (pdf) => {
-    if (value >= 70) return { ...await optimizePdfStructure(file, signal), reducedFurther: false };
     const variants = profiles(value);
     let best;
     for (let index = 0; index < (targetBytes ? variants.length : 1); index += 1) {
