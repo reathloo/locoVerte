@@ -9,16 +9,26 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_PREFIXES = ("assets/icon-concepts/", "vendor/")
+EXCLUDED_PREFIXES = ("assets/icon-concepts/", "vendor/", "dist/", "node_modules/", ".git/")
 TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 
 def source_paths():
-    project_files = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).split(b"\0")
+    try:
+        project_files = subprocess.check_output(
+            ["git", "ls-files", "-z"], cwd=ROOT, stderr=subprocess.DEVNULL
+        ).split(b"\0")
+        candidates = (raw.decode() for raw in project_files if raw)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        candidates = (
+            path.relative_to(ROOT).as_posix()
+            for path in ROOT.rglob("*")
+            if path.is_file()
+        )
     paths = sorted(
-        Path(raw.decode()).as_posix()
-        for raw in project_files
-        if raw and not raw.decode().startswith(EXCLUDED_PREFIXES)
+        Path(name).as_posix()
+        for name in candidates
+        if not name.startswith(EXCLUDED_PREFIXES)
     )
     for name in paths:
         path = ROOT / name

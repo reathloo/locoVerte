@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { loadPdfJs } from './pdfjs-loader.js';
+import { loadPdfJs, pdfDocumentOptions } from './pdfjs-loader.js';
 import { zipBlobs, MAX_ZIP_BYTES } from './zip.js';
 import { imageBitmap } from './conversion.js';
 import { MAX_PDF_PAGES, MAX_PDF_OUTPUT_SIZE } from './limits.js';
@@ -47,15 +47,7 @@ export const imageToPdf = (file, strength, signal) => imagesToPdf([file], streng
 export async function pdfToImagesZip(file, type, strength, signal, onProgress = () => {}) {
   signal.throwIfAborted();
   const pdfjs = await loadPdfJs();
-  const task = pdfjs.getDocument({
-    data: new Uint8Array(await file.arrayBuffer()),
-    cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,
-    cMapPacked: true,
-    standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href,
-    wasmUrl: new URL('../vendor/pdfjs/wasm/', import.meta.url).href,
-    iccUrl: new URL('../vendor/pdfjs/iccs/', import.meta.url).href,
-    isEvalSupported: false,
-  });
+  const task = pdfjs.getDocument(pdfDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   const abort = () => { task.destroy().catch(() => {}); };
   signal.addEventListener('abort', abort, { once: true });
   try {
@@ -104,7 +96,7 @@ export async function pdfToImagesZip(file, type, strength, signal, onProgress = 
 export async function pdfToText(file, signal, onProgress = () => {}) {
   signal.throwIfAborted();
   const pdfjs = await loadPdfJs();
-  const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false });
+  const task = pdfjs.getDocument(pdfDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   const abort = () => { task.destroy().catch(() => {}); };
   signal.addEventListener('abort', abort, { once: true });
   try {

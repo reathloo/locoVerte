@@ -1,21 +1,21 @@
 {
   "name": "locoverte",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "private": true,
   "license": "GPL-3.0-only",
   "scripts": {
     "build:vendor": "node scripts/build-vendor.mjs",
     "package:extension": "python3 scripts/package_extension.py",
     "package:source": "python3 scripts/package_source.py",
-    "test:local": "node --test tests/metadata.test.mjs tests/privacy-inspection.test.mjs tests/media-metadata.test.mjs tests/office-cleanup.test.mjs tests/pdf-pages.test.mjs tests/lazy-vendors.test.mjs tests/zip-stream.test.mjs tests/batch-ui.test.mjs tests/launcher.test.mjs"
+    "test:local": "node --test tests/metadata.test.mjs tests/privacy-inspection.test.mjs tests/media-metadata.test.mjs tests/office-cleanup.test.mjs tests/pdf-pages.test.mjs tests/pdfjs-compat.test.mjs tests/lazy-vendors.test.mjs tests/zip-stream.test.mjs tests/batch-ui.test.mjs tests/launcher.test.mjs"
   },
   "dependencies": {
-    "@mediabunny/mp3-encoder": "^1.24.0",
+    "@mediabunny/mp3-encoder": "1.65.0",
     "gifenc": "1.0.3",
     "gifuct-js": "2.1.2",
-    "mediabunny": "^1.24.0",
+    "mediabunny": "1.65.0",
     "pdf-lib": "1.17.1",
-    "pdfjs-dist": "5.6.205",
+    "pdfjs-dist": "6.5.438",
     "utif": "^3.1.0"
   },
   "devDependencies": {

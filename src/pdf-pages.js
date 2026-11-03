@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { loadPdfJs } from './pdfjs-loader.js';
+import { loadPdfJs, pdfDocumentOptions } from './pdfjs-loader.js';
 import { MAX_PDF_PAGES, MAX_PDF_OUTPUT_SIZE, MAX_FILE_SIZE } from './limits.js';
 
 const MAX_PAGES = MAX_PDF_PAGES;
@@ -20,15 +20,7 @@ export function isVisuallyBlank(data, width, height) {
 export async function findBlankPdfPages(file, signal, onProgress = () => {}) {
   await loadSafePdf(file, signal);
   const pdfjs = await loadPdfJs();
-  const task = pdfjs.getDocument({
-    data: new Uint8Array(await file.arrayBuffer()),
-    cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href,
-    cMapPacked: true,
-    standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href,
-    wasmUrl: new URL('../vendor/pdfjs/wasm/', import.meta.url).href,
-    iccUrl: new URL('../vendor/pdfjs/iccs/', import.meta.url).href,
-    isEvalSupported: false,
-  });
+  const task = pdfjs.getDocument(pdfDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   const abort = () => { task.destroy().catch(() => {}); };
   signal?.addEventListener('abort', abort, { once: true });
   try {

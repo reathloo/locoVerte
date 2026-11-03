@@ -27,7 +27,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm run build:vendor
-          git diff --exit-code -- vendor/generated
+          git diff --exit-code -- vendor
       - name: Test store package
         run: |
           python -m unittest discover -s tests -p 'test_*.py'
@@ -36,6 +36,15 @@ jobs:
         run: |
           python scripts/package_extension.py
           python scripts/package_source.py
+      - name: Verify source package reproduces the extension
+        run: |
+          mkdir -p dist/source-rebuild
+          python -m zipfile -e dist/locoverte-0.2.10-source.zip dist/source-rebuild
+          cd dist/source-rebuild
+          pnpm install --frozen-lockfile
+          pnpm run build:vendor
+          python scripts/package_extension.py --output ../source-rebuilt-extension.zip
+          cmp ../locoverte-0.2.10.zip ../source-rebuilt-extension.zip
       - name: Lint packaged Firefox extension
         run: |
           archive=$(find dist -maxdepth 1 -name 'locoverte-*.zip' ! -name '*-source.zip' -print -quit)
