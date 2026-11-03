@@ -173,9 +173,16 @@ function formatBytes(bytes) {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: index ? 2 : 0 }).format(bytes / 1024 ** index)} ${units[index]}`;
 }
 
+function preferredScrollBehavior() {
+  return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+}
+
 function showError(message) {
-  $('error').textContent = message;
-  $('error').hidden = false;
+  const error = $('error');
+  error.textContent = message;
+  error.hidden = false;
+  error.focus({ preventScroll: true });
+  error.scrollIntoView({ block: 'nearest', behavior: preferredScrollBehavior() });
 }
 
 function settings() {
@@ -623,7 +630,9 @@ async function openBatchRedaction(item) {
   batchRedactionItem = item;
   if (item.source.type === 'application/pdf') await ensurePdfLib();
   await batchRedactionEditor.open(item.source);
-  $('batch-redact-editor').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const editor = $('batch-redact-editor');
+  editor.scrollIntoView({ block: 'nearest', behavior: preferredScrollBehavior() });
+  editor.querySelector('[data-redact-field="redact-title"]')?.focus();
 }
 
 function renderBatch() {
@@ -1349,7 +1358,9 @@ $('redact-open').addEventListener('click', async () => {
     }
     if (file === source) {
       if (source.type === 'application/pdf') await ensurePdfLib();
-      redactionEditor.open(source);
+      await redactionEditor.open(source);
+      $('redact-editor').scrollIntoView({ block: 'nearest', behavior: preferredScrollBehavior() });
+      $('redact-title').focus();
     }
   } catch (error) { showError(error.message); }
 });

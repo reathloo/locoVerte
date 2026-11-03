@@ -57,7 +57,7 @@
       <div id="drop-overlay" class="drop-overlay" aria-hidden="true" hidden>
         <div><svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 15h8m-4-4v8"/></svg><strong data-i18n="dropFilesHere">Drop files anywhere here</strong></div>
       </div>
-      <div id="error" class="error" role="alert" hidden></div>
+      <div id="error" class="error" role="alert" tabindex="-1" hidden></div>
 
       <section id="workspace" hidden>
         <div id="single-workspace">
@@ -99,14 +99,14 @@
             </div>
             <button id="redact-open" class="secondary-button redact-open" type="button" data-i18n="redactOpen" hidden>Redact areas locally</button>
             <section id="redact-editor" class="redact-editor" hidden aria-labelledby="redact-title">
-              <h2 id="redact-title" data-i18n="redactTitle">Redact areas</h2>
+              <h2 id="redact-title" data-i18n="redactTitle" tabindex="-1">Redact areas</h2>
               <p class="field-help" data-i18n="redactWarning">Marked areas are removed from a newly rendered copy. PDF text, links, forms and signatures are lost; animations become a still image.</p>
-              <div class="redact-page-controls"><button id="redact-prev" type="button" aria-label="Previous page">‹</button><span id="redact-page"></span><button id="redact-next" type="button" aria-label="Next page">›</button></div>
-              <div class="redact-canvas-wrap"><canvas id="redact-preview"></canvas><canvas id="redact-overlay" aria-label="Drag to mark an area for redaction"></canvas></div>
+              <div class="redact-page-controls"><button id="redact-prev" type="button" aria-label="Previous page" data-i18n-aria-label="previousPage">‹</button><span id="redact-page"></span><button id="redact-next" type="button" aria-label="Next page" data-i18n-aria-label="nextPage">›</button></div>
+              <div class="redact-canvas-wrap"><canvas id="redact-preview"></canvas><canvas id="redact-overlay" role="img" aria-label="Drag to mark an area for redaction" data-i18n-aria-label="redactCanvasLabel"></canvas></div>
               <label class="metadata-option"><input id="redact-all-pages" type="checkbox"><span data-i18n="redactAllPages">Apply new area to every page</span></label>
               <div class="redact-tools"><label for="redact-band-size" data-i18n="redactBandSize">Header/footer height (%)</label><input id="redact-band-size" type="number" value="8" min="1" max="40"><button id="redact-header" type="button" data-i18n="redactHeader">Remove header</button><button id="redact-footer" type="button" data-i18n="redactFooter">Remove footer</button></div>
-              <div class="redact-crop"><label data-i18n="redactCrop">Crop edges (%)</label><input id="redact-crop-top" type="number" min="0" max="40" value="0" aria-label="Crop top"><input id="redact-crop-right" type="number" min="0" max="40" value="0" aria-label="Crop right"><input id="redact-crop-bottom" type="number" min="0" max="40" value="0" aria-label="Crop bottom"><input id="redact-crop-left" type="number" min="0" max="40" value="0" aria-label="Crop left"></div>
-              <p id="redact-count" class="field-help"></p><p id="redact-status" class="field-help" role="status"></p>
+              <div class="redact-crop"><label data-i18n="redactCrop">Crop edges (%)</label><input id="redact-crop-top" type="number" min="0" max="40" value="0" aria-label="Crop top" data-i18n-aria-label="cropTop"><input id="redact-crop-right" type="number" min="0" max="40" value="0" aria-label="Crop right" data-i18n-aria-label="cropRight"><input id="redact-crop-bottom" type="number" min="0" max="40" value="0" aria-label="Crop bottom" data-i18n-aria-label="cropBottom"><input id="redact-crop-left" type="number" min="0" max="40" value="0" aria-label="Crop left" data-i18n-aria-label="cropLeft"></div>
+              <p id="redact-count" class="field-help" role="status" aria-live="polite"></p><p id="redact-status" class="field-help" role="status"></p>
               <div class="redact-actions"><button id="redact-undo" type="button" data-i18n="redactUndo">Undo last area</button><button id="redact-cancel" type="button" data-i18n="cancel">Cancel</button><button id="redact-export" class="primary-button" type="button" data-i18n="redactExport">Create redacted copy</button></div>
             </section>
             <div class="adjust-field">

@@ -1,14 +1,14 @@
 import { imageBitmap } from './conversion.js';
 import { MAX_PDF_OUTPUT_SIZE, MAX_PDF_PAGES } from './limits.js';
 import { t } from './i18n.js';
-import { loadPdfJs } from './pdfjs-loader.js';
+import { loadPdfJs, pdfDocumentOptions } from './pdfjs-loader.js';
 
 // Rectangles use fractions of the original page; display scaling never changes export coordinates.
 export function createRedactionEditor(root, onResult, onError) {
   const $ = (id) => root.querySelector(`[data-redact-field="${id}"]`) ?? root.querySelector(`#${id}`);
   const preview = $('redact-preview'), overlay = $('redact-overlay');
   const context = overlay.getContext('2d');
-  let file, document, pages = [], regions = [], current = 0, drag = null, generation = 0;
+  let file, document, pages = [], regions = [], current = 0, drag = null, generation = 0, returnFocus = null;
   const normalized = (event) => {
     const bounds = overlay.getBoundingClientRect();
     return { x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)), y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)) };
@@ -26,11 +26,13 @@ export function createRedactionEditor(root, onResult, onError) {
     const canvas = globalThis.document.createElement('canvas');
     if (document) {
       const page = await document.getPage(index + 1);
-      const original = page.getViewport({ scale: 1 });
-      const factor = Math.min(scale, 3200 / Math.max(original.width, original.height), Math.sqrt(12_000_000 / (original.width * original.height)));
-      const viewport = page.getViewport({ scale: factor });
-      canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
-      await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: 'white' }).promise;
+      try {
+        const original = page.getViewport({ scale: 1 });
+        const factor = Math.min(scale, 3200 / Math.max(original.width, original.height), Math.sqrt(12_000_000 / (original.width * original.height)));
+        const viewport = page.getViewport({ scale: factor });
+        canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: 'white' }).promise;
+      } finally { page.cleanup(); }
     } else {
       const bitmap = await imageBitmap(file);
       canvas.width = bitmap.width; canvas.height = bitmap.height;
@@ -42,7 +44,7 @@ export function createRedactionEditor(root, onResult, onError) {
   async function showPage() {
     const request = generation;
     const canvas = await pageCanvas(current, document ? 1.2 : 1);
-    if (request !== generation) return;
+    if (request !== generation) { canvas.width = canvas.height = 0; return; }
     preview.width = canvas.width; preview.height = canvas.height;
     preview.getContext('2d').drawImage(canvas, 0, 0);
     canvas.width = canvas.height = 0;
@@ -51,7 +53,8 @@ export function createRedactionEditor(root, onResult, onError) {
     $('redact-next').disabled = current === pages.length - 1;
     paint();
   }
-  function reset() {
+  function reset(restoreFocus = false) {
+    const focusTarget = returnFocus;
     generation++;
     document?.destroy(); document = null; file = null; pages = []; regions = []; current = 0;
     drag = null;
@@ -59,19 +62,23 @@ export function createRedactionEditor(root, onResult, onError) {
     for (const side of ['top', 'right', 'bottom', 'left']) $(`redact-crop-${side}`).value = '0';
     $('redact-all-pages').checked = false;
     root.hidden = true;
+    if (restoreFocus) {
+      returnFocus = null;
+      queueMicrotask(() => { if (focusTarget?.isConnected) focusTarget.focus(); });
+    }
   }
   async function open(source) {
-    reset(); file = source; root.hidden = false;
+    const opener = globalThis.document.activeElement;
+    reset(); returnFocus = opener; file = source; root.hidden = false;
+    const request = generation;
     $('redact-status').textContent = t('redactLoading');
     try {
       if (source.type === 'application/pdf') {
         const pdfjs = await loadPdfJs();
-        const task = pdfjs.getDocument({ data: new Uint8Array(await source.arrayBuffer()), isEvalSupported: false,
-          cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href, cMapPacked: true,
-          standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href,
-          wasmUrl: new URL('../vendor/pdfjs/wasm/', import.meta.url).href,
-          iccUrl: new URL('../vendor/pdfjs/iccs/', import.meta.url).href });
-        document = await task.promise;
+        const task = pdfjs.getDocument(pdfDocumentOptions(new Uint8Array(await source.arrayBuffer())));
+        const loaded = await task.promise;
+        if (request !== generation) { await loaded.destroy(); return; }
+        document = loaded;
         if (!document.numPages || document.numPages > MAX_PDF_PAGES) throw new Error(t('tooManyPages'));
         pages = Array.from({ length: document.numPages }, (_, index) => index);
       } else pages = [0];
@@ -94,7 +101,7 @@ export function createRedactionEditor(root, onResult, onError) {
   $('redact-prev').addEventListener('click', () => { current--; showPage().catch(onError); });
   $('redact-next').addEventListener('click', () => { current++; showPage().catch(onError); });
   $('redact-undo').addEventListener('click', () => { regions.pop(); paint(); });
-  $('redact-cancel').addEventListener('click', reset);
+  $('redact-cancel').addEventListener('click', () => reset(true));
   $('redact-header').addEventListener('click', () => addBand('top'));
   $('redact-footer').addEventListener('click', () => addBand('bottom'));
   function addBand(position) {
@@ -139,7 +146,7 @@ export function createRedactionEditor(root, onResult, onError) {
       const blob = pdf ? new Blob([await pdf.save()], { type: 'application/pdf' }) : imageResult;
       if (blob.size > MAX_PDF_OUTPUT_SIZE) throw new Error(t('pdfOutputTooLarge'));
       onResult(file, blob);
-      reset();
+      reset(true);
     } catch (error) { onError(error); }
     finally { $('redact-export').disabled = false; }
   });
