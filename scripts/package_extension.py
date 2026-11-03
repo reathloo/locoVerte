@@ -51,11 +51,16 @@ TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 def package_paths():
     try:
+        git_root = Path(subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], cwd=ROOT, stderr=subprocess.DEVNULL, text=True
+        ).strip()).resolve()
+        if git_root != ROOT.resolve():
+            raise RuntimeError("project root is not the active Git root")
         tracked = subprocess.check_output(
             ["git", "ls-files", "-z"], cwd=ROOT, stderr=subprocess.DEVNULL
         ).split(b"\0")
         candidates = (Path(raw.decode()).as_posix() for raw in tracked if raw)
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.CalledProcessError, RuntimeError):
         candidates = (
             path.relative_to(ROOT).as_posix()
             for path in ROOT.rglob("*")
